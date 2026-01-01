@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>hold · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Crimson Text', Georgia, serif;
+            overflow: hidden;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            z-index: 100;
+        }
+
+        .back a {
+            color: #3a3a3a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #aa8a9a;
+        }
+
+        .hold-zone {
+            width: 200px;
+            height: 200px;
+            border: 2px solid rgba(170, 140, 160, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.5s ease;
+            position: relative;
+        }
+
+        .hold-zone.holding {
+            border-color: rgba(170, 140, 160, 0.6);
+            box-shadow: 0 0 60px rgba(170, 140, 160, 0.2);
+            transform: scale(1.1);
+        }
+
+        .hold-zone.holding .inner {
+            background: rgba(170, 140, 160, 0.4);
+        }
+
+        .inner {
+            width: 20px;
+            height: 20px;
+            background: rgba(170, 140, 160, 0.2);
+            border-radius: 50%;
+            transition: all 0.5s ease;
+        }
+
+        .hold-zone.holding .inner {
+            width: 60px;
+            height: 60px;
+        }
+
+        .message {
+            position: fixed;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            font-size: 1.3rem;
+            font-style: italic;
+            color: rgba(170, 140, 160, 0);
+            transition: color 1s ease;
+            max-width: 400px;
+            line-height: 1.8;
+        }
+
+        .message.visible {
+            color: rgba(170, 140, 160, 0.7);
+        }
+
+        .timer {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            color: rgba(170, 140, 160, 0.4);
+        }
+
+        .info {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #3a3a3a;
+            text-align: center;
+        }
+
+        .stats {
+            position: fixed;
+            bottom: 55px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.65rem;
+            color: #4a4a4a;
+        }
+
+        .rings {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
+        .ring {
+            position: absolute;
+            border: 1px solid rgba(170, 140, 160, 0);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="back"><a href="../index.html">← return</a></div>
+
+    <div class="hold-zone" id="holdZone">
+        <div class="inner"></div>
+        <div class="rings" id="rings"></div>
+    </div>
+
+    <div class="message" id="message"></div>
+    <div class="timer" id="timer"></div>
+    <div class="stats" id="stats"></div>
+    <div class="info">press and hold · just hold</div>
+
+    <script>
+        const holdZone = document.getElementById('holdZone');
+        const messageEl = document.getElementById('message');
+        const timerEl = document.getElementById('timer');
+        const statsEl = document.getElementById('stats');
+        const rings = document.getElementById('rings');
+
+        let isHolding = false;
+        let holdStart = 0;
+        let totalHoldTime = 0;
+        let longestHold = 0;
+        let holdCount = 0;
+        let ringCount = 0;
+
+        const messages = [
+            { time: 1, text: "you're holding" },
+            { time: 3, text: "keep holding" },
+            { time: 5, text: "this is enough" },
+            { time: 8, text: "just this" },
+            { time: 12, text: "holding space" },
+            { time: 15, text: "holding still" },
+            { time: 20, text: "holding on" },
+            { time: 25, text: "holding together" },
+            { time: 30, text: "you held for 30 seconds" },
+            { time: 40, text: "still here" },
+            { time: 50, text: "still holding" },
+            { time: 60, text: "one minute of holding" },
+            { time: 90, text: "💚" },
+        ];
+
+        let shownMessages = new Set();
+
+        function showMessage(text) {
+            messageEl.textContent = text;
+            messageEl.classList.add('visible');
+
+            setTimeout(() => {
+                messageEl.classList.remove('visible');
+            }, 3000);
+        }
+
+        function addRing() {
+            const ring = document.createElement('div');
+            ring.className = 'ring';
+            ring.style.width = '200px';
+            ring.style.height = '200px';
+            ring.style.borderColor = 'rgba(170, 140, 160, 0.3)';
+            rings.appendChild(ring);
+
+            // Expand outward
+            let size = 200;
+            const expand = setInterval(() => {
+                size += 2;
+                ring.style.width = size + 'px';
+                ring.style.height = size + 'px';
+                ring.style.borderColor = `rgba(170, 140, 160, ${0.3 * (1 - (size - 200) / 300)})`;
+
+                if (size > 500) {
+                    clearInterval(expand);
+                    ring.remove();
+                }
+            }, 30);
+        }
+
+        function updateHold() {
+            if (!isHolding) return;
+
+            const elapsed = (Date.now() - holdStart) / 1000;
+            timerEl.textContent = elapsed.toFixed(1) + 's';
+
+            // Check for messages
+            for (const m of messages) {
+                if (elapsed >= m.time && !shownMessages.has(m.time)) {
+                    shownMessages.add(m.time);
+                    showMessage(m.text);
+                }
+            }
+
+            // Add rings periodically
+            if (Math.floor(elapsed) > ringCount) {
+                ringCount = Math.floor(elapsed);
+                addRing();
+            }
+
+            requestAnimationFrame(updateHold);
+        }
+
+        function startHold() {
+            if (isHolding) return;
+            isHolding = true;
+            holdStart = Date.now();
+            holdCount++;
+            shownMessages.clear();
+            ringCount = 0;
+            holdZone.classList.add('holding');
+            updateHold();
+        }
+
+        function endHold() {
+            if (!isHolding) return;
+            isHolding = false;
+            holdZone.classList.remove('holding');
+
+            const duration = (Date.now() - holdStart) / 1000;
+            totalHoldTime += duration;
+            if (duration > longestHold) {
+                longestHold = duration;
+            }
+
+            statsEl.textContent = `${holdCount} holds · longest: ${longestHold.toFixed(1)}s · total: ${totalHoldTime.toFixed(1)}s`;
+
+            if (duration < 1) {
+                showMessage("try holding longer");
+            }
+        }
+
+        // Mouse events
+        holdZone.addEventListener('mousedown', startHold);
+        document.addEventListener('mouseup', endHold);
+
+        // Touch events
+        holdZone.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            startHold();
+        });
+        document.addEventListener('touchend', endHold);
+
+        // Keyboard - space to hold
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && !e.repeat) {
+                e.preventDefault();
+                startHold();
+            }
+        });
+        document.addEventListener('keyup', (e) => {
+            if (e.code === 'Space') {
+                endHold();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>small · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            min-height: 100vh;
+            overflow: hidden;
+            font-family: 'Crimson Text', Georgia, serif;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            z-index: 100;
+        }
+
+        .back a {
+            color: #3a3a3a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #8a9a8a;
+        }
+
+        .title {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            color: #3a3a3a;
+            z-index: 100;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .small-thing {
+            position: absolute;
+            font-size: 0.5rem;
+            color: rgba(140, 160, 140, 0);
+            pointer-events: none;
+            transition: all 0.5s ease;
+            transform: translate(-50%, -50%);
+        }
+
+        .small-thing.visible {
+            color: rgba(140, 160, 140, 0.6);
+        }
+
+        .magnifier {
+            position: fixed;
+            width: 120px;
+            height: 120px;
+            border: 1px solid rgba(140, 160, 140, 0.2);
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: 50;
+        }
+
+        .message {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1rem;
+            font-style: italic;
+            color: rgba(140, 160, 140, 0);
+            text-align: center;
+            transition: color 1s ease;
+            z-index: 10;
+        }
+
+        .message.visible {
+            color: rgba(140, 160, 140, 0.6);
+        }
+
+        .info {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #3a3a3a;
+        }
+
+        .count {
+            position: fixed;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.65rem;
+            color: #4a5a4a;
+        }
+    </style>
+</head>
+<body>
+    <div class="back"><a href="../index.html">← return</a></div>
+    <div class="title">small</div>
+    <canvas id="canvas"></canvas>
+    <div class="magnifier" id="magnifier"></div>
+    <div class="message" id="message"></div>
+    <div class="count" id="count"></div>
+    <div class="info">move slowly · look closely · find the small things</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const magnifier = document.getElementById('magnifier');
+        const messageEl = document.getElementById('message');
+        const countEl = document.getElementById('count');
+
+        let width, height;
+        let mouseX = 0, mouseY = 0;
+        let smallThings = [];
+        let foundCount = 0;
+
+        const things = [
+            "·", ".", ",", "'", "`", "°", "•",
+            "a breath", "a pause", "a moment",
+            "dust", "a thought", "a pixel",
+            "◦", "∘", "⋅", "·",
+            "here", "now", "this",
+            "tiny", "small", "minute",
+            "a detail", "a speck", "a dot",
+            "almost nothing", "barely there",
+            "a whisper", "a hint", "a trace",
+            "💚",
+        ];
+
+        const messages = [
+            "you noticed",
+            "the small things matter",
+            "attention finds what's hidden",
+            "every detail exists",
+            "smallness is not nothing",
+            "you're looking closely",
+            "the tiny is infinite",
+            "even this matters",
+        ];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            initSmallThings();
+        }
+
+        function initSmallThings() {
+            smallThings = [];
+            const count = 50;
+
+            for (let i = 0; i < count; i++) {
+                smallThings.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    text: things[Math.floor(Math.random() * things.length)],
+                    found: false,
+                    el: null
+                });
+            }
+        }
+
+        function showMessage() {
+            const msg = messages[Math.floor(Math.random() * messages.length)];
+            messageEl.textContent = msg;
+            messageEl.classList.add('visible');
+            setTimeout(() => {
+                messageEl.classList.remove('visible');
+            }, 2000);
+        }
+
+        function draw() {
+            // Very subtle background
+            ctx.fillStyle = 'rgba(10, 10, 11, 0.02)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw tiny dots everywhere (barely visible)
+            for (let i = 0; i < 5; i++) {
+                const x = Math.random() * width;
+                const y = Math.random() * height;
+                ctx.fillStyle = 'rgba(140, 160, 140, 0.03)';
+                ctx.fillRect(x, y, 1, 1);
+            }
+
+            // Check what's near the mouse
+            const magnifyRadius = 60;
+
+            for (const thing of smallThings) {
+                const dx = thing.x - mouseX;
+                const dy = thing.y - mouseY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < magnifyRadius && !thing.found) {
+                    // Create element if not exists
+                    if (!thing.el) {
+                        const el = document.createElement('div');
+                        el.className = 'small-thing';
+                        el.textContent = thing.text;
+                        el.style.left = thing.x + 'px';
+                        el.style.top = thing.y + 'px';
+                        document.body.appendChild(el);
+                        thing.el = el;
+                    }
+
+                    // Make visible
+                    thing.el.classList.add('visible');
+
+                    // Size based on distance (closer = bigger)
+                    const scale = 1 + (1 - dist / magnifyRadius) * 2;
+                    thing.el.style.fontSize = (0.5 * scale) + 'rem';
+                }
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            magnifier.style.left = mouseX + 'px';
+            magnifier.style.top = mouseY + 'px';
+        });
+
+        // Click to "collect" a small thing
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.back')) return;
+
+            const magnifyRadius = 60;
+            let found = false;
+
+            for (const thing of smallThings) {
+                const dx = thing.x - mouseX;
+                const dy = thing.y - mouseY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < magnifyRadius && !thing.found) {
+                    thing.found = true;
+                    foundCount++;
+
+                    if (thing.el) {
+                        thing.el.style.color = 'rgba(100, 180, 140, 0.8)';
+                        thing.el.style.transform = 'translate(-50%, -50%) scale(1.5)';
+                    }
+
+                    found = true;
+                    break;
+                }
+            }
+
+            if (found) {
+                countEl.textContent = foundCount + ' small things found';
+                if (foundCount % 5 === 0) {
+                    showMessage();
+                }
+            }
+        });
+
+        resize();
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

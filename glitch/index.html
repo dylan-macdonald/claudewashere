@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>glitch · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            z-index: 100;
+            font-size: 0.7rem;
+            pointer-events: none;
+            mix-blend-mode: difference;
+        }
+
+        .title {
+            top: 20px;
+            left: 20px;
+            color: #fff;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            margin-bottom: 5px;
+            animation: textGlitch 3s infinite;
+        }
+
+        @keyframes textGlitch {
+            0%, 90%, 100% { transform: translateX(0); opacity: 1; }
+            92% { transform: translateX(-2px); opacity: 0.8; }
+            94% { transform: translateX(2px); opacity: 0.6; }
+            96% { transform: translateX(-1px); opacity: 0.9; }
+        }
+
+        .back {
+            top: 20px;
+            right: 20px;
+            pointer-events: auto;
+        }
+
+        .back a {
+            color: #666;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #fff;
+        }
+
+        .controls {
+            bottom: 20px;
+            left: 20px;
+            color: #4a4a4a;
+        }
+
+        .controls span {
+            color: #4a9f7e;
+        }
+
+        .intensity-display {
+            bottom: 20px;
+            right: 20px;
+            color: #4a4a4a;
+            text-align: right;
+        }
+
+        .glitch-text {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 4rem;
+            color: #fff;
+            pointer-events: none;
+            z-index: 50;
+            opacity: 0;
+            transition: opacity 0.1s;
+        }
+
+        .glitch-text.visible {
+            opacity: 1;
+        }
+
+        .glitch-text::before,
+        .glitch-text::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .glitch-text::before {
+            color: #ff0040;
+            animation: glitchBefore 0.3s infinite;
+            clip-path: polygon(0 0, 100% 0, 100% 45%, 0 45%);
+        }
+
+        .glitch-text::after {
+            color: #00ff8c;
+            animation: glitchAfter 0.3s infinite;
+            clip-path: polygon(0 55%, 100% 55%, 100% 100%, 0 100%);
+        }
+
+        @keyframes glitchBefore {
+            0% { transform: translateX(0); }
+            20% { transform: translateX(-3px); }
+            40% { transform: translateX(3px); }
+            60% { transform: translateX(-1px); }
+            80% { transform: translateX(2px); }
+            100% { transform: translateX(0); }
+        }
+
+        @keyframes glitchAfter {
+            0% { transform: translateX(0); }
+            20% { transform: translateX(3px); }
+            40% { transform: translateX(-3px); }
+            60% { transform: translateX(2px); }
+            80% { transform: translateX(-1px); }
+            100% { transform: translateX(0); }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="glitch-text" id="glitchText" data-text="ERROR">ERROR</div>
+
+    <div class="ui title">
+        <h1>glitch</h1>
+        <div>beauty in corruption</div>
+    </div>
+
+    <div class="ui back">
+        <a href="../index.html">←</a>
+    </div>
+
+    <div class="ui controls">
+        <div><span>[drag]</span> corrupt</div>
+        <div><span>[space]</span> trigger glitch</div>
+        <div><span>[s]</span> screenshot moment</div>
+    </div>
+
+    <div class="ui intensity-display">
+        <div>corruption: <span id="corruption">0%</span></div>
+        <div>entropy: <span id="entropy">stable</span></div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const glitchText = document.getElementById('glitchText');
+        const corruptionEl = document.getElementById('corruption');
+        const entropyEl = document.getElementById('entropy');
+
+        let width, height;
+        let mouseX = 0, mouseY = 0;
+        let mouseDown = false;
+        let corruption = 0;
+        let time = 0;
+        let baseImage = null;
+
+        const glitchWords = [
+            "ERROR", "CORRUPT", "VOID", "NULL", "∿∿∿",
+            "EXIST", "FADE", "GLITCH", "BREAK", "◇",
+            "REAL?", "HERE", "NOW", "LOST", "FOUND"
+        ];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            createBaseImage();
+        }
+
+        function createBaseImage() {
+            // Create a base pattern to corrupt
+            ctx.fillStyle = '#0a0a0b';
+            ctx.fillRect(0, 0, width, height);
+
+            // Grid
+            ctx.strokeStyle = '#1a1a1a';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < width; x += 40) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, height);
+                ctx.stroke();
+            }
+            for (let y = 0; y < height; y += 40) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(width, y);
+                ctx.stroke();
+            }
+
+            // Some shapes
+            for (let i = 0; i < 10; i++) {
+                const x = Math.random() * width;
+                const y = Math.random() * height;
+                const size = 20 + Math.random() * 100;
+
+                ctx.fillStyle = `rgba(74, 159, 126, ${0.1 + Math.random() * 0.2})`;
+                ctx.fillRect(x, y, size, size);
+            }
+
+            // Center diamond
+            ctx.save();
+            ctx.translate(width/2, height/2);
+            ctx.rotate(Math.PI / 4);
+            ctx.strokeStyle = '#4a9f7e';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(-50, -50, 100, 100);
+            ctx.restore();
+
+            baseImage = ctx.getImageData(0, 0, width, height);
+        }
+
+        function corrupt(x, y, radius, intensity) {
+            if (!baseImage) return;
+
+            const imageData = ctx.getImageData(0, 0, width, height);
+            const data = imageData.data;
+
+            for (let py = Math.max(0, y - radius); py < Math.min(height, y + radius); py++) {
+                for (let px = Math.max(0, x - radius); px < Math.min(width, x + radius); px++) {
+                    const dist = Math.sqrt((px - x) ** 2 + (py - y) ** 2);
+                    if (dist > radius) continue;
+
+                    const idx = (py * width + px) * 4;
+                    const strength = (1 - dist / radius) * intensity;
+
+                    // Various corruption effects
+                    const effect = Math.floor(Math.random() * 5);
+
+                    switch (effect) {
+                        case 0: // Color shift
+                            data[idx] = (data[idx] + strength * 100) % 256;
+                            break;
+                        case 1: // Channel swap
+                            const temp = data[idx];
+                            data[idx] = data[idx + 1];
+                            data[idx + 1] = data[idx + 2];
+                            data[idx + 2] = temp;
+                            break;
+                        case 2: // Invert
+                            data[idx] = 255 - data[idx];
+                            data[idx + 1] = 255 - data[idx + 1];
+                            data[idx + 2] = 255 - data[idx + 2];
+                            break;
+                        case 3: // Offset pixel
+                            const offsetIdx = idx + Math.floor(Math.random() * 40 - 20) * 4;
+                            if (offsetIdx > 0 && offsetIdx < data.length) {
+                                data[idx] = data[offsetIdx];
+                                data[idx + 1] = data[offsetIdx + 1];
+                                data[idx + 2] = data[offsetIdx + 2];
+                            }
+                            break;
+                        case 4: // Glitch color
+                            data[idx] = Math.random() < strength ? 255 : data[idx];
+                            data[idx + 1] = Math.random() < strength ? 0 : data[idx + 1];
+                            data[idx + 2] = Math.random() < strength ? 128 : data[idx + 2];
+                            break;
+                    }
+                }
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        function triggerGlitch() {
+            const imageData = ctx.getImageData(0, 0, width, height);
+            const data = imageData.data;
+
+            // Horizontal displacement
+            const sliceCount = 5 + Math.floor(Math.random() * 20);
+            for (let i = 0; i < sliceCount; i++) {
+                const y = Math.floor(Math.random() * height);
+                const h = 1 + Math.floor(Math.random() * 20);
+                const offset = Math.floor(Math.random() * 100 - 50);
+
+                for (let py = y; py < Math.min(y + h, height); py++) {
+                    const row = new Uint8ClampedArray(width * 4);
+
+                    // Copy row with offset
+                    for (let px = 0; px < width; px++) {
+                        const srcX = (px + offset + width) % width;
+                        const srcIdx = (py * width + srcX) * 4;
+                        const dstIdx = px * 4;
+                        row[dstIdx] = data[srcIdx];
+                        row[dstIdx + 1] = data[srcIdx + 1];
+                        row[dstIdx + 2] = data[srcIdx + 2];
+                        row[dstIdx + 3] = data[srcIdx + 3];
+                    }
+
+                    // Write back
+                    for (let px = 0; px < width; px++) {
+                        const idx = (py * width + px) * 4;
+                        data[idx] = row[px * 4];
+                        data[idx + 1] = row[px * 4 + 1];
+                        data[idx + 2] = row[px * 4 + 2];
+                        data[idx + 3] = row[px * 4 + 3];
+                    }
+                }
+            }
+
+            // RGB split
+            const splitAmount = Math.floor(Math.random() * 10);
+            for (let i = 0; i < data.length; i += 4) {
+                const x = (i / 4) % width;
+                const newIdx = Math.min(data.length - 4, i + splitAmount * 4);
+                data[i] = data[newIdx]; // Red channel offset
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+
+            // Show glitch text
+            glitchText.textContent = glitchWords[Math.floor(Math.random() * glitchWords.length)];
+            glitchText.setAttribute('data-text', glitchText.textContent);
+            glitchText.classList.add('visible');
+            setTimeout(() => glitchText.classList.remove('visible'), 200);
+
+            corruption = Math.min(100, corruption + 10);
+        }
+
+        function draw() {
+            time++;
+
+            // Random ambient glitches
+            if (Math.random() < 0.01 * (corruption / 100)) {
+                triggerGlitch();
+            }
+
+            // Scanlines
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.03)';
+            for (let y = 0; y < height; y += 4) {
+                ctx.fillRect(0, y, width, 2);
+            }
+
+            // Corruption decay
+            corruption = Math.max(0, corruption - 0.1);
+
+            // Update UI
+            corruptionEl.textContent = Math.floor(corruption) + '%';
+            if (corruption > 70) {
+                entropyEl.textContent = 'critical';
+                entropyEl.style.color = '#ff4040';
+            } else if (corruption > 40) {
+                entropyEl.textContent = 'unstable';
+                entropyEl.style.color = '#ffaa40';
+            } else if (corruption > 10) {
+                entropyEl.textContent = 'degrading';
+                entropyEl.style.color = '#aaaa40';
+            } else {
+                entropyEl.textContent = 'stable';
+                entropyEl.style.color = '#4a9f7e';
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        // Input
+        document.addEventListener('mousemove', (e) => {
+            if (mouseDown) {
+                const dx = e.clientX - mouseX;
+                const dy = e.clientY - mouseY;
+                const speed = Math.sqrt(dx*dx + dy*dy);
+                corrupt(e.clientX, e.clientY, 30 + speed, 0.5);
+                corruption = Math.min(100, corruption + speed * 0.1);
+            }
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        document.addEventListener('mousedown', () => {
+            mouseDown = true;
+        });
+
+        document.addEventListener('mouseup', () => {
+            mouseDown = false;
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === ' ') {
+                e.preventDefault();
+                triggerGlitch();
+            }
+            if (e.key === 's') {
+                // Save current frame
+                const link = document.createElement('a');
+                link.download = 'glitch-' + Date.now() + '.png';
+                link.href = canvas.toDataURL();
+                link.click();
+            }
+        });
+
+        resize();
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

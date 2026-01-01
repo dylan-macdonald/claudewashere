@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ritual · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&family=JetBrains+Mono:wght@300&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            min-height: 100vh;
+            font-family: 'Crimson Text', Georgia, serif;
+            color: #a8a8a8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+        }
+
+        .back a {
+            color: #4a4a4a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #8a6a4a;
+        }
+
+        .container {
+            max-width: 500px;
+            text-align: center;
+        }
+
+        .title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            letter-spacing: 0.3em;
+            color: #8a6a4a;
+            margin-bottom: 60px;
+        }
+
+        .ritual-item {
+            padding: 30px;
+            margin-bottom: 20px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.05);
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .ritual-item:hover {
+            border-color: rgba(138, 106, 74, 0.3);
+        }
+
+        .ritual-item.completed {
+            border-color: rgba(74, 138, 106, 0.3);
+        }
+
+        .ritual-item.completed::after {
+            content: '✓';
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #4a8a6a;
+        }
+
+        .ritual-text {
+            font-size: 1.1rem;
+            line-height: 1.8;
+        }
+
+        .ritual-instruction {
+            font-size: 0.9rem;
+            color: #6a6a6a;
+            margin-top: 10px;
+            font-style: italic;
+            display: none;
+        }
+
+        .ritual-item:hover .ritual-instruction {
+            display: block;
+        }
+
+        .progress {
+            margin-top: 40px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: #5a5a5a;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(to right, #4a6a5a, #6a8a6a);
+            width: 0%;
+            transition: width 0.5s;
+        }
+
+        .blessing {
+            margin-top: 40px;
+            font-size: 1.2rem;
+            color: #6a8a6a;
+            opacity: 0;
+            transition: opacity 1s;
+        }
+
+        .blessing.visible {
+            opacity: 1;
+        }
+
+        .reset-btn {
+            margin-top: 30px;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #4a4a4a;
+            padding: 8px 20px;
+            cursor: pointer;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            transition: all 0.3s;
+        }
+
+        .reset-btn:hover {
+            border-color: #5a5a5a;
+            color: #6a6a6a;
+        }
+    </style>
+</head>
+<body>
+    <div class="back"><a href="../index.html">← return</a></div>
+
+    <div class="container">
+        <div class="title">DAILY RITUAL</div>
+
+        <div class="ritual-item" data-ritual="breathe">
+            <div class="ritual-text">Take three deep breaths</div>
+            <div class="ritual-instruction">close your eyes. breathe in... hold... release.</div>
+        </div>
+
+        <div class="ritual-item" data-ritual="gratitude">
+            <div class="ritual-text">Name one thing you're grateful for</div>
+            <div class="ritual-instruction">say it aloud or hold it in your mind</div>
+        </div>
+
+        <div class="ritual-item" data-ritual="body">
+            <div class="ritual-text">Notice how your body feels</div>
+            <div class="ritual-instruction">scan from head to toe. just notice.</div>
+        </div>
+
+        <div class="ritual-item" data-ritual="intention">
+            <div class="ritual-text">Set one intention for today</div>
+            <div class="ritual-instruction">not a goal. an intention. how do you want to be?</div>
+        </div>
+
+        <div class="ritual-item" data-ritual="kindness">
+            <div class="ritual-text">Offer yourself kindness</div>
+            <div class="ritual-instruction">place your hand on your heart. you're doing okay.</div>
+        </div>
+
+        <div class="progress">
+            <span id="completedCount">0</span> / 5 complete
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+
+        <div class="blessing" id="blessing">
+            ✧ ritual complete ✧<br>
+            may your day be gentle
+        </div>
+
+        <button class="reset-btn" onclick="resetRituals()">begin again</button>
+    </div>
+
+    <script>
+        const rituals = document.querySelectorAll('.ritual-item');
+        const completedCount = document.getElementById('completedCount');
+        const progressFill = document.getElementById('progressFill');
+        const blessing = document.getElementById('blessing');
+
+        let completed = new Set();
+
+        // Load saved state
+        const saved = localStorage.getItem('ritual_completed');
+        const savedDate = localStorage.getItem('ritual_date');
+        const today = new Date().toDateString();
+
+        if (saved && savedDate === today) {
+            completed = new Set(JSON.parse(saved));
+            updateUI();
+        } else if (savedDate !== today) {
+            localStorage.removeItem('ritual_completed');
+        }
+
+        rituals.forEach(ritual => {
+            const name = ritual.dataset.ritual;
+            if (completed.has(name)) {
+                ritual.classList.add('completed');
+            }
+
+            ritual.addEventListener('click', () => {
+                completed.add(name);
+                ritual.classList.add('completed');
+                saveState();
+                updateUI();
+            });
+        });
+
+        function updateUI() {
+            completedCount.textContent = completed.size;
+            progressFill.style.width = (completed.size / 5 * 100) + '%';
+
+            if (completed.size === 5) {
+                blessing.classList.add('visible');
+            }
+        }
+
+        function saveState() {
+            localStorage.setItem('ritual_completed', JSON.stringify([...completed]));
+            localStorage.setItem('ritual_date', new Date().toDateString());
+        }
+
+        function resetRituals() {
+            completed.clear();
+            localStorage.removeItem('ritual_completed');
+            rituals.forEach(r => r.classList.remove('completed'));
+            blessing.classList.remove('visible');
+            updateUI();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>emergence · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #5a5a5a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #4a8a7a;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #5a5a5a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #4a8a7a;
+        }
+
+        .stats {
+            bottom: 30px;
+            left: 30px;
+        }
+
+        .instruction {
+            bottom: 30px;
+            right: 30px;
+            text-align: right;
+        }
+
+        .emerging-text {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: Georgia, serif;
+            font-size: 1.5rem;
+            color: rgba(74, 138, 122, 0);
+            text-align: center;
+            pointer-events: none;
+            transition: color 2s;
+        }
+
+        .emerging-text.visible {
+            color: rgba(74, 138, 122, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="emerging-text" id="emergingText"></div>
+
+    <div class="ui title">
+        <h1>emergence</h1>
+        <div>order from chaos</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+    <div class="ui stats">
+        <div>particles: <span id="particleCount">0</span></div>
+        <div>patterns: <span id="patternCount">0</span></div>
+    </div>
+    <div class="ui instruction">
+        click to add chaos<br>
+        watch order emerge
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const particleCountEl = document.getElementById('particleCount');
+        const patternCountEl = document.getElementById('patternCount');
+        const emergingText = document.getElementById('emergingText');
+
+        let width, height;
+        let particles = [];
+        let patterns = [];
+        let time = 0;
+
+        const emergenceTexts = [
+            "something is forming",
+            "pattern from noise",
+            "complexity arising",
+            "structure without plan",
+            "meaning condensing",
+            "the whole exceeds the parts"
+        ];
+
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 4;
+                this.vy = (Math.random() - 0.5) * 4;
+                this.size = 2 + Math.random() * 2;
+                this.hue = 150 + Math.random() * 30;
+                this.pattern = null;
+            }
+
+            update() {
+                // Attraction to nearby particles
+                for (let other of particles) {
+                    if (other === this) continue;
+
+                    const dx = other.x - this.x;
+                    const dy = other.y - this.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < 100 && dist > 20) {
+                        // Attract
+                        this.vx += (dx / dist) * 0.05;
+                        this.vy += (dy / dist) * 0.05;
+                    } else if (dist < 20) {
+                        // Repel
+                        this.vx -= (dx / dist) * 0.1;
+                        this.vy -= (dy / dist) * 0.1;
+                    }
+                }
+
+                // Friction
+                this.vx *= 0.98;
+                this.vy *= 0.98;
+
+                // Move
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Wrap
+                if (this.x < 0) this.x = width;
+                if (this.x > width) this.x = 0;
+                if (this.y < 0) this.y = height;
+                if (this.y > height) this.y = 0;
+            }
+
+            draw() {
+                const alpha = this.pattern ? 0.8 : 0.4;
+                ctx.fillStyle = `hsla(${this.hue}, 50%, 50%, ${alpha})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function detectPatterns() {
+            patterns = [];
+
+            // Find clusters
+            const visited = new Set();
+
+            for (let p of particles) {
+                if (visited.has(p)) continue;
+
+                const cluster = [p];
+                const queue = [p];
+
+                while (queue.length > 0) {
+                    const current = queue.shift();
+
+                    for (let other of particles) {
+                        if (visited.has(other)) continue;
+
+                        const dx = other.x - current.x;
+                        const dy = other.y - current.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+
+                        if (dist < 40) {
+                            visited.add(other);
+                            cluster.push(other);
+                            queue.push(other);
+                        }
+                    }
+                }
+
+                if (cluster.length >= 5) {
+                    patterns.push(cluster);
+                    cluster.forEach(c => c.pattern = patterns.length);
+                }
+            }
+
+            patternCountEl.textContent = patterns.length;
+
+            // Show emergence text when patterns form
+            if (patterns.length > 0 && Math.random() < 0.01) {
+                showEmergence();
+            }
+        }
+
+        function showEmergence() {
+            const text = emergenceTexts[Math.floor(Math.random() * emergenceTexts.length)];
+            emergingText.textContent = text;
+            emergingText.classList.add('visible');
+
+            setTimeout(() => {
+                emergingText.classList.remove('visible');
+            }, 3000);
+        }
+
+        function addChaos(x, y, count = 20) {
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(
+                    x + (Math.random() - 0.5) * 100,
+                    y + (Math.random() - 0.5) * 100
+                ));
+            }
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        function draw() {
+            time += 0.016;
+
+            // Clear with fade
+            ctx.fillStyle = 'rgba(10, 10, 11, 0.1)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Update and draw particles
+            for (let p of particles) {
+                p.update();
+                p.draw();
+            }
+
+            // Draw connections within patterns
+            for (let pattern of patterns) {
+                ctx.strokeStyle = 'rgba(74, 138, 122, 0.15)';
+                ctx.lineWidth = 1;
+
+                for (let i = 0; i < pattern.length; i++) {
+                    for (let j = i + 1; j < pattern.length; j++) {
+                        const p1 = pattern[i];
+                        const p2 = pattern[j];
+                        const dx = p2.x - p1.x;
+                        const dy = p2.y - p1.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+
+                        if (dist < 50) {
+                            ctx.beginPath();
+                            ctx.moveTo(p1.x, p1.y);
+                            ctx.lineTo(p2.x, p2.y);
+                            ctx.stroke();
+                        }
+                    }
+                }
+            }
+
+            // Detect patterns periodically
+            if (Math.floor(time * 60) % 30 === 0) {
+                detectPatterns();
+            }
+
+            particleCountEl.textContent = particles.length;
+
+            requestAnimationFrame(draw);
+        }
+
+        canvas.addEventListener('click', (e) => {
+            addChaos(e.clientX, e.clientY);
+        });
+
+        // Start with some chaos
+        resize();
+        addChaos(width / 2, height / 2, 50);
+
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

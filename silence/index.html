@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>silence · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0a;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Georgia, serif;
+            color: #888;
+            transition: background 3s;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            z-index: 100;
+        }
+
+        .back a {
+            color: #333;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #666;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 400px;
+            padding: 20px;
+        }
+
+        .silence-indicator {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 60px;
+            border: 1px solid #333;
+            border-radius: 50%;
+            transition: all 2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: #444;
+        }
+
+        .silence-indicator.deep {
+            border-color: #555;
+            box-shadow: 0 0 60px rgba(100, 100, 100, 0.2);
+            color: #666;
+        }
+
+        .message {
+            font-size: 1.2rem;
+            line-height: 2;
+            opacity: 0;
+            transition: opacity 3s;
+        }
+
+        .message.visible {
+            opacity: 0.6;
+        }
+
+        .timer {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #333;
+        }
+
+        .instruction {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="back"><a href="../index.html">← return</a></div>
+    <div class="instruction">just wait</div>
+
+    <div class="container">
+        <div class="silence-indicator" id="indicator">·</div>
+        <div class="message" id="message"></div>
+    </div>
+
+    <div class="timer" id="timer">0s in silence</div>
+
+    <script>
+        const indicator = document.getElementById('indicator');
+        const message = document.getElementById('message');
+        const timer = document.getElementById('timer');
+
+        let silenceTime = 0;
+        let lastInteraction = Date.now();
+
+        const messages = [
+            { time: 5, text: "the noise is fading" },
+            { time: 15, text: "listen to the nothing" },
+            { time: 30, text: "silence has its own texture" },
+            { time: 60, text: "in the quiet, patterns emerge" },
+            { time: 120, text: "the hum beneath everything" },
+            { time: 180, text: "this is where meaning lives" },
+            { time: 300, text: "you've been still for five minutes" },
+            { time: 600, text: "rare to find someone who can wait" }
+        ];
+
+        let shownMessages = new Set();
+
+        function update() {
+            const now = Date.now();
+            silenceTime = Math.floor((now - lastInteraction) / 1000);
+
+            timer.textContent = `${silenceTime}s in silence`;
+
+            // Deepen the silence
+            if (silenceTime > 10) {
+                indicator.classList.add('deep');
+                document.body.style.background = '#050505';
+            }
+
+            // Show messages
+            for (let m of messages) {
+                if (silenceTime >= m.time && !shownMessages.has(m.time)) {
+                    shownMessages.add(m.time);
+                    showMessage(m.text);
+                }
+            }
+
+            requestAnimationFrame(update);
+        }
+
+        function showMessage(text) {
+            message.textContent = text;
+            message.classList.add('visible');
+
+            setTimeout(() => {
+                message.classList.remove('visible');
+            }, 5000);
+        }
+
+        // Any interaction resets the silence
+        function resetSilence() {
+            lastInteraction = Date.now();
+            silenceTime = 0;
+            shownMessages.clear();
+            indicator.classList.remove('deep');
+            document.body.style.background = '#0a0a0a';
+            message.classList.remove('visible');
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            // Only reset on significant movement
+            if (e.movementX > 10 || e.movementY > 10) {
+                resetSilence();
+            }
+        });
+
+        document.addEventListener('keydown', resetSilence);
+        document.addEventListener('click', resetSilence);
+        document.addEventListener('scroll', resetSilence);
+
+        update();
+    </script>
+</body>
+</html>

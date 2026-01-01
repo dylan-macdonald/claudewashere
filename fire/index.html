@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>fire · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0505;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #8a5a3a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #c87030;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #8a5a3a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #c87030;
+        }
+
+        .instruction {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-style: italic;
+            color: #6a4a3a;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>fire</h1>
+        <div>transformation</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+    <div class="ui instruction">move mouse to feed the flames</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let particles = [];
+        let mouseX = 0, mouseY = 0;
+        let intensity = 0.5;
+
+        class Flame {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = -3 - Math.random() * 4;
+                this.life = 1;
+                this.size = 5 + Math.random() * 15;
+                this.hue = 20 + Math.random() * 30;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vx *= 0.99;
+                this.vy *= 0.99;
+                this.life -= 0.015;
+                this.size *= 0.98;
+                return this.life > 0;
+            }
+
+            draw() {
+                const gradient = ctx.createRadialGradient(
+                    this.x, this.y, 0,
+                    this.x, this.y, this.size
+                );
+
+                const alpha = this.life * 0.8;
+                const lightness = 50 + (1 - this.life) * 30;
+
+                gradient.addColorStop(0, `hsla(${this.hue + 20}, 100%, 80%, ${alpha})`);
+                gradient.addColorStop(0.4, `hsla(${this.hue}, 100%, ${lightness}%, ${alpha * 0.8})`);
+                gradient.addColorStop(1, 'transparent');
+
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            mouseX = width / 2;
+            mouseY = height * 0.8;
+        }
+
+        function draw() {
+            ctx.fillStyle = 'rgba(10, 5, 5, 0.15)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Spawn flames from base
+            const baseX = width / 2;
+            const baseY = height * 0.85;
+
+            for (let i = 0; i < 5 * intensity; i++) {
+                particles.push(new Flame(
+                    baseX + (Math.random() - 0.5) * 100,
+                    baseY + Math.random() * 20
+                ));
+            }
+
+            // Flames toward mouse
+            const dx = mouseX - baseX;
+            const dy = mouseY - baseY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < 300) {
+                intensity = 1 + (300 - dist) / 100;
+                for (let i = 0; i < 2; i++) {
+                    const flame = new Flame(
+                        baseX + (Math.random() - 0.5) * 50,
+                        baseY
+                    );
+                    flame.vx += (dx / dist) * 2;
+                    flame.vy += (dy / dist) * 2;
+                    particles.push(flame);
+                }
+            } else {
+                intensity = Math.max(0.5, intensity * 0.99);
+            }
+
+            particles = particles.filter(p => {
+                p.draw();
+                return p.update();
+            });
+
+            // Glow at base
+            const glow = ctx.createRadialGradient(baseX, baseY, 0, baseX, baseY, 150 * intensity);
+            glow.addColorStop(0, `rgba(255, 100, 0, ${0.2 * intensity})`);
+            glow.addColorStop(0.5, `rgba(255, 50, 0, ${0.1 * intensity})`);
+            glow.addColorStop(1, 'transparent');
+            ctx.fillStyle = glow;
+            ctx.fillRect(0, 0, width, height);
+
+            // Logs
+            ctx.fillStyle = '#2a1a10';
+            ctx.fillRect(baseX - 80, baseY + 10, 160, 30);
+            ctx.fillRect(baseX - 60, baseY + 5, 120, 25);
+
+            requestAnimationFrame(draw);
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        resize();
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

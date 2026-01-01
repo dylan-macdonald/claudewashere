@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>lightning · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a15;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #5a5a7a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #8a8aba;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #5a5a7a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #8a8aba;
+        }
+
+        .instruction {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-style: italic;
+            color: #4a4a5a;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>lightning</h1>
+        <div>sudden illumination</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+    <div class="ui instruction">click to strike</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let bolts = [];
+        let flashAlpha = 0;
+
+        class Bolt {
+            constructor(startX, endX, endY) {
+                this.segments = [];
+                this.life = 1;
+                this.generateBolt(startX, 0, endX, endY);
+            }
+
+            generateBolt(x1, y1, x2, y2, depth = 0) {
+                if (depth > 5) {
+                    this.segments.push({ x1, y1, x2, y2, main: false });
+                    return;
+                }
+
+                const midX = (x1 + x2) / 2 + (Math.random() - 0.5) * 100;
+                const midY = (y1 + y2) / 2;
+
+                // Main bolt
+                this.segments.push({ x1, y1, x2: midX, y2: midY, main: depth < 2 });
+                this.segments.push({ x1: midX, y1: midY, x2, y2, main: depth < 2 });
+
+                // Branches
+                if (Math.random() < 0.4 && depth < 3) {
+                    const branchX = midX + (Math.random() - 0.5) * 200;
+                    const branchY = midY + 50 + Math.random() * 100;
+                    this.generateBolt(midX, midY, branchX, branchY, depth + 2);
+                }
+
+                // Recursively add detail
+                this.generateBolt(x1, y1, midX, midY, depth + 1);
+                this.generateBolt(midX, midY, x2, y2, depth + 1);
+            }
+
+            update() {
+                this.life -= 0.05;
+                return this.life > 0;
+            }
+
+            draw() {
+                this.segments.forEach(seg => {
+                    const alpha = this.life * (seg.main ? 1 : 0.5);
+                    const width = seg.main ? 3 : 1;
+
+                    ctx.strokeStyle = `rgba(200, 200, 255, ${alpha})`;
+                    ctx.lineWidth = width;
+                    ctx.lineCap = 'round';
+                    ctx.beginPath();
+                    ctx.moveTo(seg.x1, seg.y1);
+                    ctx.lineTo(seg.x2, seg.y2);
+                    ctx.stroke();
+
+                    // Glow
+                    if (seg.main) {
+                        ctx.strokeStyle = `rgba(150, 150, 255, ${alpha * 0.3})`;
+                        ctx.lineWidth = width * 5;
+                        ctx.stroke();
+                    }
+                });
+            }
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        function draw() {
+            // Dark sky
+            ctx.fillStyle = `rgba(10, 10, 21, ${1 - flashAlpha * 0.5})`;
+            ctx.fillRect(0, 0, width, height);
+
+            // Flash
+            if (flashAlpha > 0) {
+                ctx.fillStyle = `rgba(200, 200, 255, ${flashAlpha * 0.2})`;
+                ctx.fillRect(0, 0, width, height);
+                flashAlpha *= 0.9;
+            }
+
+            // Clouds
+            ctx.fillStyle = 'rgba(30, 30, 40, 0.5)';
+            for (let i = 0; i < 5; i++) {
+                const x = (i * width / 5) + Math.sin(Date.now() * 0.0001 + i) * 20;
+                ctx.beginPath();
+                ctx.ellipse(x, 50, 150, 40, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            bolts = bolts.filter(b => {
+                b.draw();
+                return b.update();
+            });
+
+            requestAnimationFrame(draw);
+        }
+
+        canvas.addEventListener('click', (e) => {
+            const startX = e.clientX;
+            bolts.push(new Bolt(startX, e.clientX + (Math.random() - 0.5) * 100, e.clientY));
+            flashAlpha = 1;
+        });
+
+        // Random lightning
+        setInterval(() => {
+            if (Math.random() < 0.1) {
+                const x = Math.random() * width;
+                bolts.push(new Bolt(x, x + (Math.random() - 0.5) * 200, height * 0.7));
+                flashAlpha = 0.5;
+            }
+        }, 2000);
+
+        resize();
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

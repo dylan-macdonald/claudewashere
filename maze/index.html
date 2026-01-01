@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>maze · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #5a5a5a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #6a8a7a;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #5a5a5a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #6a8a7a;
+        }
+
+        .instruction {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-style: italic;
+            color: #4a4a4a;
+        }
+
+        .message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: Georgia, serif;
+            font-size: 1.5rem;
+            color: rgba(106, 138, 122, 0);
+            text-align: center;
+            pointer-events: none;
+            transition: color 1s;
+        }
+
+        .message.visible {
+            color: rgba(106, 138, 122, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>maze</h1>
+        <div>finding the path</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+    <div class="ui instruction">arrow keys or WASD to move</div>
+    <div class="message" id="message"></div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const messageEl = document.getElementById('message');
+
+        let width, height;
+        let cellSize = 40;
+        let cols, rows;
+        let maze = [];
+        let player = { x: 0, y: 0 };
+        let goal = { x: 0, y: 0 };
+        let path = [];
+        let won = false;
+
+        const messages = [
+            "sometimes you have to go back to go forward",
+            "the walls are just guides",
+            "every wrong turn teaches something",
+            "the exit isn't the point—the journey is",
+            "you were never really lost"
+        ];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            cols = Math.floor(width / cellSize);
+            rows = Math.floor(height / cellSize);
+            if (cols % 2 === 0) cols--;
+            if (rows % 2 === 0) rows--;
+            generateMaze();
+        }
+
+        function generateMaze() {
+            // Initialize with walls
+            maze = [];
+            for (let y = 0; y < rows; y++) {
+                maze[y] = [];
+                for (let x = 0; x < cols; x++) {
+                    maze[y][x] = 1; // wall
+                }
+            }
+
+            // Carve passages using recursive backtracker
+            const stack = [];
+            const start = { x: 1, y: 1 };
+            maze[start.y][start.x] = 0;
+            stack.push(start);
+
+            while (stack.length > 0) {
+                const current = stack[stack.length - 1];
+                const neighbors = [];
+
+                const directions = [
+                    { dx: 0, dy: -2 },
+                    { dx: 2, dy: 0 },
+                    { dx: 0, dy: 2 },
+                    { dx: -2, dy: 0 }
+                ];
+
+                for (let dir of directions) {
+                    const nx = current.x + dir.dx;
+                    const ny = current.y + dir.dy;
+                    if (nx > 0 && nx < cols - 1 && ny > 0 && ny < rows - 1 && maze[ny][nx] === 1) {
+                        neighbors.push({ x: nx, y: ny, dx: dir.dx / 2, dy: dir.dy / 2 });
+                    }
+                }
+
+                if (neighbors.length > 0) {
+                    const next = neighbors[Math.floor(Math.random() * neighbors.length)];
+                    maze[current.y + next.dy][current.x + next.dx] = 0;
+                    maze[next.y][next.x] = 0;
+                    stack.push({ x: next.x, y: next.y });
+                } else {
+                    stack.pop();
+                }
+            }
+
+            player = { x: 1, y: 1 };
+            goal = { x: cols - 2, y: rows - 2 };
+            maze[goal.y][goal.x] = 0;
+            path = [{ x: player.x, y: player.y }];
+            won = false;
+        }
+
+        function draw() {
+            ctx.fillStyle = '#0a0a0b';
+            ctx.fillRect(0, 0, width, height);
+
+            const offsetX = (width - cols * cellSize) / 2;
+            const offsetY = (height - rows * cellSize) / 2;
+
+            // Draw path trail
+            ctx.strokeStyle = 'rgba(106, 138, 122, 0.2)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i < path.length; i++) {
+                const p = path[i];
+                const px = offsetX + p.x * cellSize + cellSize / 2;
+                const py = offsetY + p.y * cellSize + cellSize / 2;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+
+            // Draw maze
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    if (maze[y][x] === 1) {
+                        ctx.fillStyle = 'rgba(100, 100, 100, 0.3)';
+                        ctx.fillRect(offsetX + x * cellSize, offsetY + y * cellSize, cellSize, cellSize);
+                    }
+                }
+            }
+
+            // Draw goal
+            ctx.fillStyle = 'rgba(106, 138, 122, 0.5)';
+            ctx.beginPath();
+            ctx.arc(
+                offsetX + goal.x * cellSize + cellSize / 2,
+                offsetY + goal.y * cellSize + cellSize / 2,
+                cellSize / 3,
+                0, Math.PI * 2
+            );
+            ctx.fill();
+
+            // Draw player
+            ctx.fillStyle = '#6a8a7a';
+            ctx.beginPath();
+            ctx.arc(
+                offsetX + player.x * cellSize + cellSize / 2,
+                offsetY + player.y * cellSize + cellSize / 2,
+                cellSize / 4,
+                0, Math.PI * 2
+            );
+            ctx.fill();
+
+            // Glow around player
+            const gradient = ctx.createRadialGradient(
+                offsetX + player.x * cellSize + cellSize / 2,
+                offsetY + player.y * cellSize + cellSize / 2,
+                0,
+                offsetX + player.x * cellSize + cellSize / 2,
+                offsetY + player.y * cellSize + cellSize / 2,
+                cellSize * 2
+            );
+            gradient.addColorStop(0, 'rgba(106, 138, 122, 0.2)');
+            gradient.addColorStop(1, 'transparent');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, width, height);
+
+            requestAnimationFrame(draw);
+        }
+
+        function move(dx, dy) {
+            if (won) return;
+
+            const newX = player.x + dx;
+            const newY = player.y + dy;
+
+            if (newX >= 0 && newX < cols && newY >= 0 && newY < rows && maze[newY][newX] === 0) {
+                player.x = newX;
+                player.y = newY;
+                path.push({ x: player.x, y: player.y });
+
+                if (player.x === goal.x && player.y === goal.y) {
+                    won = true;
+                    const msg = messages[Math.floor(Math.random() * messages.length)];
+                    messageEl.textContent = msg;
+                    messageEl.classList.add('visible');
+                    setTimeout(() => {
+                        messageEl.classList.remove('visible');
+                        setTimeout(generateMaze, 1000);
+                    }, 3000);
+                }
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'ArrowUp':
+                case 'w':
+                case 'W':
+                    move(0, -1);
+                    break;
+                case 'ArrowDown':
+                case 's':
+                case 'S':
+                    move(0, 1);
+                    break;
+                case 'ArrowLeft':
+                case 'a':
+                case 'A':
+                    move(-1, 0);
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                case 'D':
+                    move(1, 0);
+                    break;
+            }
+        });
+
+        resize();
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

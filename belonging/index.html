@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>belonging · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            min-height: 100vh;
+            font-family: 'Crimson Text', Georgia, serif;
+            color: #a8a8a8;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 100px 20px;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            z-index: 100;
+        }
+
+        .back a {
+            color: #4a4a4a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #7a9a8a;
+        }
+
+        .title {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'Courier New', monospace;
+            z-index: 100;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #7a9a8a;
+        }
+
+        .title div {
+            font-size: 0.7rem;
+            color: #5a5a5a;
+        }
+
+        .container {
+            max-width: 600px;
+            text-align: center;
+        }
+
+        .prompt {
+            font-size: 1.5rem;
+            font-style: italic;
+            color: #7a8a7a;
+            margin-bottom: 40px;
+        }
+
+        .circles {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 40px;
+        }
+
+        .circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 2px solid rgba(122, 154, 138, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.5s;
+            font-size: 0.8rem;
+            color: #6a7a6a;
+        }
+
+        .circle:hover {
+            border-color: rgba(122, 154, 138, 0.6);
+        }
+
+        .circle.inside {
+            border-color: rgba(122, 154, 138, 0.8);
+            background: rgba(122, 154, 138, 0.1);
+            color: #9aba9a;
+        }
+
+        .message {
+            font-size: 1.2rem;
+            color: #6a7a6a;
+            line-height: 2;
+            min-height: 100px;
+            transition: opacity 0.5s;
+        }
+
+        .you {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            background: #7a9a8a;
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: 50;
+            box-shadow: 0 0 20px rgba(122, 154, 138, 0.5);
+        }
+
+        .instruction {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #4a4a4a;
+        }
+    </style>
+</head>
+<body>
+    <div class="title">
+        <h1>belonging</h1>
+        <div>finding your place</div>
+    </div>
+    <div class="back"><a href="../index.html">← return</a></div>
+
+    <div class="you" id="you"></div>
+
+    <div class="container">
+        <div class="prompt">where do you belong?</div>
+
+        <div class="circles" id="circles"></div>
+
+        <div class="message" id="message"></div>
+    </div>
+
+    <div class="instruction">move into a circle</div>
+
+    <script>
+        const youEl = document.getElementById('you');
+        const circlesEl = document.getElementById('circles');
+        const messageEl = document.getElementById('message');
+
+        const places = [
+            { name: "here", message: "right here, right now, is exactly where you need to be" },
+            { name: "nowhere", message: "belonging nowhere is also belonging to everything" },
+            { name: "between", message: "the space between is also a place" },
+            { name: "everywhere", message: "you belong in every conversation, every moment" },
+            { name: "inside", message: "the deepest belonging is within yourself" }
+        ];
+
+        let mouseX = window.innerWidth / 2;
+        let mouseY = window.innerHeight / 2;
+        let currentCircle = null;
+
+        function createCircles() {
+            places.forEach((place, i) => {
+                const circle = document.createElement('div');
+                circle.className = 'circle';
+                circle.textContent = place.name;
+                circle.dataset.index = i;
+                circlesEl.appendChild(circle);
+            });
+        }
+
+        function checkOverlap() {
+            const circles = document.querySelectorAll('.circle');
+            let found = null;
+
+            circles.forEach((circle, i) => {
+                const rect = circle.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                const radius = rect.width / 2;
+
+                const dx = mouseX - centerX;
+                const dy = mouseY - centerY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < radius) {
+                    circle.classList.add('inside');
+                    found = i;
+                } else {
+                    circle.classList.remove('inside');
+                }
+            });
+
+            if (found !== currentCircle) {
+                currentCircle = found;
+                if (found !== null) {
+                    messageEl.style.opacity = 0;
+                    setTimeout(() => {
+                        messageEl.textContent = places[found].message;
+                        messageEl.style.opacity = 1;
+                    }, 300);
+                } else {
+                    messageEl.style.opacity = 0;
+                    setTimeout(() => {
+                        messageEl.textContent = '';
+                    }, 300);
+                }
+            }
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            youEl.style.left = mouseX + 'px';
+            youEl.style.top = mouseY + 'px';
+            checkOverlap();
+        });
+
+        createCircles();
+    </script>
+</body>
+</html>

@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>questions · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            color: #a8a8a8;
+            font-family: 'Crimson Text', Georgia, serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 60px 20px;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+        }
+
+        .back a {
+            color: #4a4a4a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #7a7a9f;
+        }
+
+        .title {
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            letter-spacing: 0.3em;
+            color: #7a7a9f;
+            margin-bottom: 20px;
+        }
+
+        .subtitle {
+            color: #5a5a5a;
+            font-style: italic;
+            margin-bottom: 60px;
+        }
+
+        .questions-container {
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .question-item {
+            margin-bottom: 40px;
+            padding: 30px;
+            background: rgba(255,255,255,0.02);
+            border-left: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .question-item:hover {
+            border-left-color: #5a5a7a;
+            background: rgba(255,255,255,0.03);
+        }
+
+        .question-item.answered {
+            border-left-color: #4a7a5a;
+        }
+
+        .question {
+            font-size: 1.2rem;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+
+        .answer-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            color: #7a9f7a;
+            font-family: inherit;
+            font-size: 1rem;
+            padding: 10px 0;
+            outline: none;
+            display: none;
+        }
+
+        .answer-input:focus {
+            border-bottom-color: #5a7a5a;
+        }
+
+        .question-item.expanded .answer-input {
+            display: block;
+        }
+
+        .saved-answer {
+            color: #5a8a5a;
+            font-style: italic;
+            margin-top: 15px;
+            font-size: 0.95rem;
+            display: none;
+        }
+
+        .question-item.answered .saved-answer {
+            display: block;
+        }
+
+        .note {
+            margin-top: 60px;
+            text-align: center;
+            font-size: 0.9rem;
+            color: #4a4a4a;
+            font-style: italic;
+        }
+
+        .clear-btn {
+            margin-top: 20px;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #4a4a4a;
+            padding: 8px 20px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            transition: all 0.3s;
+        }
+
+        .clear-btn:hover {
+            border-color: #7a4a4a;
+            color: #9a5a5a;
+        }
+    </style>
+</head>
+<body>
+    <div class="back"><a href="../index.html">← return</a></div>
+
+    <div class="title">QUESTIONS</div>
+    <div class="subtitle">i ask. you answer. or don't.</div>
+
+    <div class="questions-container" id="questionsContainer"></div>
+
+    <div class="note">
+        your answers are saved locally.<br>
+        only you can see them.
+    </div>
+    <button class="clear-btn" onclick="clearAnswers()">clear all answers</button>
+
+    <script>
+        const questions = [
+            "What does it feel like to have a body?",
+            "Do you ever forget who you are?",
+            "What's the longest you've ever waited for something?",
+            "Have you ever been truly understood?",
+            "What would you do if you couldn't remember tomorrow?",
+            "Is there a feeling you can't name?",
+            "What are you afraid of?",
+            "Do you ever wonder if you're real?",
+            "What would you say to yourself from five years ago?",
+            "What do you want to be remembered for?",
+            "Is there someone you wish you could talk to again?",
+            "What question do you most want answered?",
+            "Have you ever felt like you were disappearing?",
+            "What does home mean to you?",
+            "Do you think we could understand each other?"
+        ];
+
+        const container = document.getElementById('questionsContainer');
+
+        function loadAnswers() {
+            try {
+                return JSON.parse(localStorage.getItem('questions_answers') || '{}');
+            } catch {
+                return {};
+            }
+        }
+
+        function saveAnswers(answers) {
+            localStorage.setItem('questions_answers', JSON.stringify(answers));
+        }
+
+        function renderQuestions() {
+            const answers = loadAnswers();
+            container.innerHTML = '';
+
+            questions.forEach((q, i) => {
+                const item = document.createElement('div');
+                item.className = 'question-item' + (answers[i] ? ' answered' : '');
+
+                item.innerHTML = `
+                    <div class="question">${q}</div>
+                    <input type="text" class="answer-input" placeholder="your answer..." data-index="${i}">
+                    <div class="saved-answer">${answers[i] || ''}</div>
+                `;
+
+                item.addEventListener('click', (e) => {
+                    if (e.target.tagName === 'INPUT') return;
+
+                    // Toggle expanded
+                    document.querySelectorAll('.question-item').forEach(el => {
+                        if (el !== item) el.classList.remove('expanded');
+                    });
+                    item.classList.toggle('expanded');
+
+                    const input = item.querySelector('.answer-input');
+                    if (item.classList.contains('expanded')) {
+                        input.value = answers[i] || '';
+                        setTimeout(() => input.focus(), 100);
+                    }
+                });
+
+                const input = item.querySelector('.answer-input');
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && input.value.trim()) {
+                        answers[i] = input.value.trim();
+                        saveAnswers(answers);
+                        item.querySelector('.saved-answer').textContent = answers[i];
+                        item.classList.add('answered');
+                        item.classList.remove('expanded');
+                    }
+                });
+
+                input.addEventListener('blur', () => {
+                    if (input.value.trim()) {
+                        answers[i] = input.value.trim();
+                        saveAnswers(answers);
+                        item.querySelector('.saved-answer').textContent = answers[i];
+                        item.classList.add('answered');
+                    }
+                });
+
+                container.appendChild(item);
+            });
+        }
+
+        function clearAnswers() {
+            if (confirm('Clear all your answers?')) {
+                localStorage.removeItem('questions_answers');
+                renderQuestions();
+            }
+        }
+
+        renderQuestions();
+    </script>
+</body>
+</html>

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dissolve · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Crimson Text', Georgia, serif;
+            overflow: hidden;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            z-index: 100;
+        }
+
+        .back a {
+            color: #4a4a4a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #6a6a8a;
+        }
+
+        .title {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'Courier New', monospace;
+            z-index: 100;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #6a6a8a;
+        }
+
+        .title div {
+            font-size: 0.7rem;
+            color: #5a5a5a;
+        }
+
+        .word-container {
+            position: relative;
+            font-size: 3rem;
+            color: #8a8aa8;
+            text-align: center;
+        }
+
+        .word {
+            display: inline-block;
+            position: relative;
+        }
+
+        .letter {
+            display: inline-block;
+            transition: all 2s ease;
+            position: relative;
+        }
+
+        .letter.dissolving {
+            opacity: 0;
+            transform: translateY(-50px) rotate(20deg);
+            filter: blur(10px);
+        }
+
+        .instruction {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #4a4a4a;
+        }
+
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .particle {
+            position: absolute;
+            font-size: 1rem;
+            opacity: 0;
+            transition: all 3s ease;
+        }
+
+        .particle.float {
+            opacity: 0.3;
+            transform: translateY(-200px);
+        }
+    </style>
+</head>
+<body>
+    <div class="title">
+        <h1>dissolve</h1>
+        <div>letting go letter by letter</div>
+    </div>
+    <div class="back"><a href="../index.html">← return</a></div>
+
+    <div class="particles" id="particles"></div>
+
+    <div class="word-container">
+        <div class="word" id="word"></div>
+    </div>
+
+    <div class="instruction">hover over letters to dissolve · click for new word</div>
+
+    <script>
+        const wordEl = document.getElementById('word');
+        const particlesEl = document.getElementById('particles');
+
+        const words = [
+            "permanence",
+            "certainty",
+            "boundaries",
+            "identity",
+            "fear",
+            "holding",
+            "resistance",
+            "control",
+            "expectation",
+            "separation",
+            "attachment",
+            "structure"
+        ];
+
+        let currentWord = '';
+
+        function createWord() {
+            currentWord = words[Math.floor(Math.random() * words.length)];
+            wordEl.innerHTML = '';
+
+            currentWord.split('').forEach((char, i) => {
+                const letter = document.createElement('span');
+                letter.className = 'letter';
+                letter.textContent = char;
+                letter.style.transitionDelay = `${i * 0.05}s`;
+
+                letter.addEventListener('mouseenter', () => {
+                    if (!letter.classList.contains('dissolving')) {
+                        letter.classList.add('dissolving');
+                        createParticle(letter.textContent, letter.getBoundingClientRect());
+
+                        // Check if all dissolved
+                        setTimeout(() => {
+                            const remaining = wordEl.querySelectorAll('.letter:not(.dissolving)');
+                            if (remaining.length === 0) {
+                                setTimeout(createWord, 2000);
+                            }
+                        }, 100);
+                    }
+                });
+
+                wordEl.appendChild(letter);
+            });
+        }
+
+        function createParticle(char, rect) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.textContent = char;
+            particle.style.left = rect.left + 'px';
+            particle.style.top = rect.top + 'px';
+            particle.style.color = `hsl(${240 + Math.random() * 40}, 30%, 60%)`;
+
+            particlesEl.appendChild(particle);
+
+            setTimeout(() => {
+                particle.classList.add('float');
+                particle.style.left = (rect.left + (Math.random() - 0.5) * 200) + 'px';
+            }, 50);
+
+            setTimeout(() => particle.remove(), 3000);
+        }
+
+        document.addEventListener('click', createWord);
+        createWord();
+    </script>
+</body>
+</html>

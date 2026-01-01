@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>rain · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a10;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #5a6a7a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #6a8aaa;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #5a6a7a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #6a8aaa;
+        }
+
+        .intensity {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>rain</h1>
+        <div>let it fall</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+    <div class="ui intensity" id="intensity">gentle</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const intensityEl = document.getElementById('intensity');
+
+        let width, height;
+        let drops = [];
+        let splashes = [];
+        let intensity = 0.3;
+
+        class Drop {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.x = Math.random() * width;
+                this.y = -20;
+                this.speed = 10 + Math.random() * 10 + intensity * 15;
+                this.length = 10 + Math.random() * 20;
+                this.opacity = 0.3 + Math.random() * 0.3;
+            }
+
+            update() {
+                this.y += this.speed;
+
+                if (this.y > height) {
+                    splashes.push(new Splash(this.x, height - 5));
+                    this.reset();
+                }
+            }
+
+            draw() {
+                ctx.strokeStyle = `rgba(150, 180, 220, ${this.opacity})`;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x - 1, this.y - this.length);
+                ctx.stroke();
+            }
+        }
+
+        class Splash {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.radius = 0;
+                this.maxRadius = 5 + Math.random() * 10;
+                this.opacity = 0.5;
+            }
+
+            update() {
+                this.radius += 0.5;
+                this.opacity -= 0.02;
+                return this.opacity > 0;
+            }
+
+            draw() {
+                ctx.strokeStyle = `rgba(150, 180, 220, ${this.opacity})`;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.ellipse(this.x, this.y, this.radius, this.radius * 0.3, 0, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+
+            drops = [];
+            const dropCount = Math.floor(100 + intensity * 200);
+            for (let i = 0; i < dropCount; i++) {
+                const drop = new Drop();
+                drop.y = Math.random() * height;
+                drops.push(drop);
+            }
+        }
+
+        function updateIntensity() {
+            if (intensity < 0.3) {
+                intensityEl.textContent = 'misting';
+            } else if (intensity < 0.5) {
+                intensityEl.textContent = 'gentle';
+            } else if (intensity < 0.7) {
+                intensityEl.textContent = 'steady';
+            } else if (intensity < 0.9) {
+                intensityEl.textContent = 'heavy';
+            } else {
+                intensityEl.textContent = 'downpour';
+            }
+        }
+
+        function draw() {
+            ctx.fillStyle = 'rgba(10, 10, 16, 0.3)';
+            ctx.fillRect(0, 0, width, height);
+
+            drops.forEach(drop => {
+                drop.update();
+                drop.draw();
+            });
+
+            splashes = splashes.filter(splash => {
+                splash.draw();
+                return splash.update();
+            });
+
+            requestAnimationFrame(draw);
+        }
+
+        document.addEventListener('wheel', (e) => {
+            intensity = Math.max(0.1, Math.min(1, intensity + e.deltaY * 0.001));
+            updateIntensity();
+
+            // Adjust drop count
+            const targetCount = Math.floor(100 + intensity * 200);
+            while (drops.length < targetCount) {
+                const drop = new Drop();
+                drop.y = Math.random() * height;
+                drops.push(drop);
+            }
+            while (drops.length > targetCount) {
+                drops.pop();
+            }
+        });
+
+        resize();
+        updateIntensity();
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

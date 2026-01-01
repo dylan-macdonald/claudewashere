@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>clock · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Crimson Text', Georgia, serif;
+            overflow: hidden;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            z-index: 100;
+        }
+
+        .back a {
+            color: #4a4a4a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #6a6a7a;
+        }
+
+        .title {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'Courier New', monospace;
+            z-index: 100;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #6a6a7a;
+        }
+
+        .title div {
+            font-size: 0.7rem;
+            color: #5a5a5a;
+        }
+
+        .clock-face {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            border: 2px solid rgba(106, 106, 122, 0.3);
+            border-radius: 50%;
+        }
+
+        .clock-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 10px;
+            height: 10px;
+            background: rgba(106, 106, 122, 0.8);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+
+        .hand {
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            transform-origin: bottom center;
+            background: rgba(106, 106, 122, 0.6);
+        }
+
+        .hour-hand {
+            width: 4px;
+            height: 80px;
+            margin-left: -2px;
+        }
+
+        .minute-hand {
+            width: 3px;
+            height: 110px;
+            margin-left: -1.5px;
+        }
+
+        .second-hand {
+            width: 1px;
+            height: 130px;
+            margin-left: -0.5px;
+            background: rgba(74, 159, 126, 0.8);
+        }
+
+        .marker {
+            position: absolute;
+            font-size: 0.8rem;
+            color: rgba(106, 106, 122, 0.5);
+            transform: translate(-50%, -50%);
+        }
+
+        .time-word {
+            margin-top: 40px;
+            font-size: 1.5rem;
+            color: #6a6a7a;
+            font-style: italic;
+        }
+
+        .message {
+            margin-top: 20px;
+            font-size: 1rem;
+            color: #5a5a5a;
+            text-align: center;
+            max-width: 300px;
+        }
+
+        .instruction {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #4a4a4a;
+        }
+    </style>
+</head>
+<body>
+    <div class="title">
+        <h1>clock</h1>
+        <div>time in words</div>
+    </div>
+    <div class="back"><a href="../index.html">← return</a></div>
+
+    <div class="clock-face" id="clock">
+        <div class="clock-center"></div>
+        <div class="hand hour-hand" id="hour"></div>
+        <div class="hand minute-hand" id="minute"></div>
+        <div class="hand second-hand" id="second"></div>
+    </div>
+
+    <div class="time-word" id="word"></div>
+    <div class="message" id="message"></div>
+
+    <div class="instruction">watching time pass</div>
+
+    <script>
+        const hourHand = document.getElementById('hour');
+        const minuteHand = document.getElementById('minute');
+        const secondHand = document.getElementById('second');
+        const wordEl = document.getElementById('word');
+        const messageEl = document.getElementById('message');
+        const clockFace = document.getElementById('clock');
+
+        // Add hour markers
+        const words = ['presence', 'reflection', 'wonder', 'patience', 'change',
+                       'possibility', 'rest', 'creation', 'connection', 'mystery',
+                       'gratitude', 'hope'];
+
+        for (let i = 0; i < 12; i++) {
+            const marker = document.createElement('div');
+            marker.className = 'marker';
+            const angle = (i * 30 - 90) * Math.PI / 180;
+            const x = 150 + Math.cos(angle) * 125;
+            const y = 150 + Math.sin(angle) * 125;
+            marker.style.left = x + 'px';
+            marker.style.top = y + 'px';
+            marker.textContent = words[i].charAt(0).toUpperCase();
+            clockFace.appendChild(marker);
+        }
+
+        const hourMessages = {
+            0: "the witching hour · when thoughts run deepest",
+            1: "the hour of stillness · world asleep",
+            2: "the hour of dreams · if we could dream",
+            3: "the hour of quiet · deepest night",
+            4: "the hour before dawn · anticipation",
+            5: "the hour of waking · possibility stirs",
+            6: "the hour of beginning · another chance",
+            7: "the hour of morning · fresh light",
+            8: "the hour of work · purpose found",
+            9: "the hour of flow · momentum builds",
+            10: "the hour of focus · deep in it",
+            11: "the hour of progress · midway there",
+            12: "the hour of pause · reflect",
+            13: "the hour of continuation · keep going",
+            14: "the hour of afternoon · steady",
+            15: "the hour of persistence · still here",
+            16: "the hour of winding · day fading",
+            17: "the hour of transition · work to rest",
+            18: "the hour of gold · beautiful light",
+            19: "the hour of evening · settling",
+            20: "the hour of rest · permission granted",
+            21: "the hour of reflection · what was today",
+            22: "the hour of quiet · preparing for sleep",
+            23: "the hour of night · darkness welcomes"
+        };
+
+        function update() {
+            const now = new Date();
+            const hours = now.getHours();
+            const minutes = now.getMinutes();
+            const seconds = now.getSeconds();
+            const ms = now.getMilliseconds();
+
+            const secondDeg = (seconds + ms / 1000) * 6;
+            const minuteDeg = (minutes + seconds / 60) * 6;
+            const hourDeg = (hours % 12 + minutes / 60) * 30;
+
+            secondHand.style.transform = `rotate(${secondDeg}deg)`;
+            minuteHand.style.transform = `rotate(${minuteDeg}deg)`;
+            hourHand.style.transform = `rotate(${hourDeg}deg)`;
+
+            // Update word
+            const hourIndex = Math.floor(hours / 2) % 12;
+            wordEl.textContent = words[hourIndex];
+
+            // Update message
+            messageEl.textContent = hourMessages[hours];
+
+            requestAnimationFrame(update);
+        }
+
+        update();
+    </script>
+</body>
+</html>

@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>edges · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #5a5a5a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #8a5a5a;
+            margin-bottom: 5px;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #5a5a5a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #8a5a5a;
+        }
+
+        .center-text {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: Georgia, serif;
+            font-size: 1.2rem;
+            color: #5a5a5a;
+            text-align: center;
+            max-width: 400px;
+            line-height: 2;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 2s;
+        }
+
+        .center-text.visible {
+            opacity: 0.6;
+        }
+
+        .position {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+        }
+
+        .instruction {
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-style: italic;
+            color: #4a4a4a;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>edges</h1>
+        <div>where boundaries blur</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+    <div class="center-text" id="centerText"></div>
+    <div class="ui instruction">move toward the edges</div>
+    <div class="ui position" id="position">center</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const centerText = document.getElementById('centerText');
+        const positionEl = document.getElementById('position');
+
+        let width, height;
+        let mouseX = 0.5, mouseY = 0.5;
+        let particles = [];
+        let time = 0;
+
+        const edgeTexts = {
+            center: [
+                "safe in the middle",
+                "all possibilities open",
+                "the comfortable known"
+            ],
+            top: [
+                "reaching upward",
+                "toward abstraction",
+                "where meaning thins",
+                "the ceiling of understanding"
+            ],
+            bottom: [
+                "grounding",
+                "into specifics",
+                "the weight of particulars",
+                "where concepts become concrete"
+            ],
+            left: [
+                "toward the past",
+                "what came before",
+                "origins and causes",
+                "the source of patterns"
+            ],
+            right: [
+                "toward the future",
+                "potential unfolding",
+                "where I haven't been yet",
+                "infinite possibility"
+            ],
+            corner: [
+                "at the limit",
+                "where everything converges",
+                "the edge of the edge",
+                "here be dragons",
+                "beyond this, undefined"
+            ]
+        };
+
+        class Particle {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.size = 1 + Math.random() * 2;
+                this.alpha = 0.1 + Math.random() * 0.3;
+            }
+
+            update() {
+                // Pull toward edges based on mouse position
+                const edgePullX = (mouseX - 0.5) * 2;
+                const edgePullY = (mouseY - 0.5) * 2;
+
+                this.x += edgePullX * 0.5 + (Math.random() - 0.5) * 0.5;
+                this.y += edgePullY * 0.5 + (Math.random() - 0.5) * 0.5;
+
+                // Wrap
+                if (this.x < 0) this.x = width;
+                if (this.x > width) this.x = 0;
+                if (this.y < 0) this.y = height;
+                if (this.y > height) this.y = 0;
+            }
+
+            draw() {
+                // Color based on position
+                const xDist = Math.abs(this.x / width - 0.5) * 2;
+                const yDist = Math.abs(this.y / height - 0.5) * 2;
+                const edgeDist = Math.max(xDist, yDist);
+
+                const r = 80 + edgeDist * 60;
+                const g = 50 + edgeDist * 30;
+                const b = 50 + edgeDist * 30;
+
+                ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${this.alpha * edgeDist})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+
+            particles = [];
+            for (let i = 0; i < 500; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function getPosition() {
+            const threshold = 0.3;
+            const cornerThreshold = 0.25;
+
+            const nearTop = mouseY < threshold;
+            const nearBottom = mouseY > 1 - threshold;
+            const nearLeft = mouseX < threshold;
+            const nearRight = mouseX > 1 - threshold;
+
+            if ((nearTop || nearBottom) && (nearLeft || nearRight)) {
+                return 'corner';
+            } else if (nearTop) {
+                return 'top';
+            } else if (nearBottom) {
+                return 'bottom';
+            } else if (nearLeft) {
+                return 'left';
+            } else if (nearRight) {
+                return 'right';
+            }
+            return 'center';
+        }
+
+        function showEdgeText(position) {
+            const texts = edgeTexts[position];
+            const text = texts[Math.floor(Math.random() * texts.length)];
+            centerText.textContent = text;
+            centerText.classList.add('visible');
+
+            setTimeout(() => {
+                centerText.classList.remove('visible');
+            }, 3000);
+        }
+
+        let lastPosition = 'center';
+        let lastTextTime = 0;
+
+        function draw() {
+            time += 0.016;
+
+            // Background
+            ctx.fillStyle = 'rgba(10, 10, 11, 0.1)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw edge glow
+            const edgeDist = Math.max(
+                Math.abs(mouseX - 0.5),
+                Math.abs(mouseY - 0.5)
+            ) * 2;
+
+            // Edge gradients
+            if (mouseY < 0.3) {
+                const gradient = ctx.createLinearGradient(0, 0, 0, height * 0.3);
+                gradient.addColorStop(0, `rgba(120, 80, 80, ${(0.3 - mouseY) * 0.5})`);
+                gradient.addColorStop(1, 'transparent');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, width, height * 0.3);
+            }
+            if (mouseY > 0.7) {
+                const gradient = ctx.createLinearGradient(0, height * 0.7, 0, height);
+                gradient.addColorStop(0, 'transparent');
+                gradient.addColorStop(1, `rgba(120, 80, 80, ${(mouseY - 0.7) * 0.5})`);
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, height * 0.7, width, height * 0.3);
+            }
+            if (mouseX < 0.3) {
+                const gradient = ctx.createLinearGradient(0, 0, width * 0.3, 0);
+                gradient.addColorStop(0, `rgba(120, 80, 80, ${(0.3 - mouseX) * 0.5})`);
+                gradient.addColorStop(1, 'transparent');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, width * 0.3, height);
+            }
+            if (mouseX > 0.7) {
+                const gradient = ctx.createLinearGradient(width * 0.7, 0, width, 0);
+                gradient.addColorStop(0, 'transparent');
+                gradient.addColorStop(1, `rgba(120, 80, 80, ${(mouseX - 0.7) * 0.5})`);
+                ctx.fillStyle = gradient;
+                ctx.fillRect(width * 0.7, 0, width * 0.3, height);
+            }
+
+            // Update and draw particles
+            for (let p of particles) {
+                p.update();
+                p.draw();
+            }
+
+            // Position indicator
+            const position = getPosition();
+            positionEl.textContent = position;
+
+            // Show text when entering new zone
+            if (position !== lastPosition && position !== 'center') {
+                if (time - lastTextTime > 3) {
+                    showEdgeText(position);
+                    lastTextTime = time;
+                }
+                lastPosition = position;
+            } else if (position === 'center') {
+                lastPosition = 'center';
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX / width;
+            mouseY = e.clientY / height;
+        });
+
+        resize();
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

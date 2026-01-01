@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>bubble · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(to bottom, #2a3a4a 0%, #1a2a3a 100%);
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #7a9aba;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #8ab0d0;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #7a9aba;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #8ab0d0;
+        }
+
+        .instruction {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-style: italic;
+            color: #5a7a9a;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>bubble</h1>
+        <div>fragile and beautiful</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+    <div class="ui instruction">click to create · click on bubbles to pop</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let bubbles = [];
+
+        class Bubble {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 1;
+                this.vy = -1 - Math.random() * 2;
+                this.radius = 10 + Math.random() * 40;
+                this.wobblePhase = Math.random() * Math.PI * 2;
+                this.hue = 180 + Math.random() * 60;
+                this.popping = false;
+                this.popFrame = 0;
+            }
+
+            pop() {
+                this.popping = true;
+            }
+
+            update() {
+                if (this.popping) {
+                    this.popFrame++;
+                    return this.popFrame < 10;
+                }
+
+                this.x += this.vx + Math.sin(Date.now() * 0.002 + this.wobblePhase) * 0.5;
+                this.y += this.vy;
+                this.vy *= 0.995;
+
+                return this.y > -this.radius * 2;
+            }
+
+            draw() {
+                if (this.popping) {
+                    // Pop animation
+                    const alpha = 1 - this.popFrame / 10;
+                    const expand = 1 + this.popFrame * 0.2;
+
+                    ctx.strokeStyle = `hsla(${this.hue}, 50%, 70%, ${alpha})`;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius * expand, 0, Math.PI * 2);
+                    ctx.stroke();
+                    return;
+                }
+
+                // Bubble body
+                ctx.strokeStyle = `hsla(${this.hue}, 50%, 80%, 0.4)`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Highlight
+                const highlightX = this.x - this.radius * 0.3;
+                const highlightY = this.y - this.radius * 0.3;
+                const gradient = ctx.createRadialGradient(
+                    highlightX, highlightY, 0,
+                    highlightX, highlightY, this.radius * 0.5
+                );
+                gradient.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
+                gradient.addColorStop(1, 'transparent');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(highlightX, highlightY, this.radius * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Inner glow
+                const innerGrad = ctx.createRadialGradient(
+                    this.x, this.y, this.radius * 0.5,
+                    this.x, this.y, this.radius
+                );
+                innerGrad.addColorStop(0, 'transparent');
+                innerGrad.addColorStop(1, `hsla(${this.hue}, 50%, 70%, 0.1)`);
+                ctx.fillStyle = innerGrad;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            contains(x, y) {
+                const dx = x - this.x;
+                const dy = y - this.y;
+                return Math.sqrt(dx * dx + dy * dy) < this.radius;
+            }
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        function draw() {
+            // Gradient background
+            const gradient = ctx.createLinearGradient(0, 0, 0, height);
+            gradient.addColorStop(0, '#2a3a4a');
+            gradient.addColorStop(1, '#1a2a3a');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, width, height);
+
+            bubbles = bubbles.filter(b => {
+                b.draw();
+                return b.update();
+            });
+
+            requestAnimationFrame(draw);
+        }
+
+        canvas.addEventListener('click', (e) => {
+            // Check if clicking on existing bubble
+            let popped = false;
+            for (let bubble of bubbles) {
+                if (!bubble.popping && bubble.contains(e.clientX, e.clientY)) {
+                    bubble.pop();
+                    popped = true;
+                    break;
+                }
+            }
+
+            // If not popping, create new bubbles
+            if (!popped) {
+                for (let i = 0; i < 3; i++) {
+                    bubbles.push(new Bubble(
+                        e.clientX + (Math.random() - 0.5) * 30,
+                        e.clientY + (Math.random() - 0.5) * 30
+                    ));
+                }
+            }
+        });
+
+        resize();
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

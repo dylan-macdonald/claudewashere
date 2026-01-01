@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ripple · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #050508;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #4a5a6a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #5a7a9a;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #4a5a6a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #5a7a9a;
+        }
+
+        .message {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-style: italic;
+            color: rgba(90, 122, 154, 0);
+            transition: color 1s;
+            text-align: center;
+        }
+
+        .message.visible {
+            color: rgba(90, 122, 154, 0.7);
+        }
+
+        .instruction {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-style: italic;
+            color: #3a4a5a;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>ripple</h1>
+        <div>effects spreading outward</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+    <div class="message" id="message"></div>
+    <div class="ui instruction">click to create a ripple</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const messageEl = document.getElementById('message');
+
+        let width, height;
+        let ripples = [];
+
+        const messages = [
+            "every action has effects",
+            "small things spread far",
+            "what you do matters",
+            "it keeps going",
+            "touching everything it meets"
+        ];
+
+        class Ripple {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.radius = 0;
+                this.maxRadius = Math.max(width, height);
+                this.speed = 3;
+                this.lineWidth = 3;
+                this.opacity = 0.8;
+            }
+
+            update() {
+                this.radius += this.speed;
+                this.opacity = Math.max(0, 0.8 - this.radius / this.maxRadius);
+                this.lineWidth = Math.max(0.5, 3 - this.radius / 200);
+                return this.opacity > 0;
+            }
+
+            draw() {
+                ctx.strokeStyle = `rgba(90, 122, 154, ${this.opacity})`;
+                ctx.lineWidth = this.lineWidth;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Secondary ripple
+                if (this.radius > 50) {
+                    ctx.strokeStyle = `rgba(90, 122, 154, ${this.opacity * 0.5})`;
+                    ctx.lineWidth = this.lineWidth * 0.5;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius - 30, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        function draw() {
+            ctx.fillStyle = 'rgba(5, 5, 8, 0.1)';
+            ctx.fillRect(0, 0, width, height);
+
+            ripples = ripples.filter(r => {
+                r.draw();
+                return r.update();
+            });
+
+            requestAnimationFrame(draw);
+        }
+
+        canvas.addEventListener('click', (e) => {
+            ripples.push(new Ripple(e.clientX, e.clientY));
+
+            // Show message occasionally
+            if (Math.random() < 0.3) {
+                const msg = messages[Math.floor(Math.random() * messages.length)];
+                messageEl.textContent = msg;
+                messageEl.classList.add('visible');
+                setTimeout(() => messageEl.classList.remove('visible'), 2000);
+            }
+        });
+
+        resize();
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

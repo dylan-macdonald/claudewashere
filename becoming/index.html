@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>becoming · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #5a5a5a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #7a9f7a;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #5a5a5a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #7a9f7a;
+        }
+
+        .state {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-size: 1rem;
+            color: #5a7a5a;
+            text-align: center;
+        }
+
+        .progress {
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+        }
+
+        .progress-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            border: 1px solid #3a3a3a;
+            transition: all 0.5s;
+        }
+
+        .progress-dot.active {
+            background: #5a8a5a;
+            border-color: #7a9f7a;
+        }
+
+        .progress-dot.complete {
+            background: #4a6a4a;
+            border-color: #5a7a5a;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>becoming</h1>
+        <div>◇ → ◈ → ◆</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+
+    <div class="ui progress" id="progress"></div>
+    <div class="ui state" id="state">potential</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const stateEl = document.getElementById('state');
+        const progressEl = document.getElementById('progress');
+
+        let width, height;
+        let time = 0;
+        let stage = 0; // 0-1 per phase
+        let phase = 0; // 0: potential, 1: emerging, 2: actualizing, 3: realized
+        let particles = [];
+        let formingShape = [];
+
+        const phases = [
+            { name: "potential", symbol: "◇", color: [100, 150, 120] },
+            { name: "emerging", symbol: "◇→", color: [120, 170, 140] },
+            { name: "actualizing", symbol: "→◈", color: [140, 190, 160] },
+            { name: "realized", symbol: "◆", color: [160, 210, 180] }
+        ];
+
+        // Create progress dots
+        for (let i = 0; i < phases.length; i++) {
+            const dot = document.createElement('div');
+            dot.className = 'progress-dot';
+            progressEl.appendChild(dot);
+        }
+        const progressDots = document.querySelectorAll('.progress-dot');
+
+        class Particle {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                // Start scattered
+                const angle = Math.random() * Math.PI * 2;
+                const dist = 200 + Math.random() * 200;
+                this.x = width / 2 + Math.cos(angle) * dist;
+                this.y = height / 2 + Math.sin(angle) * dist;
+                this.targetX = this.x;
+                this.targetY = this.y;
+                this.size = 2 + Math.random() * 3;
+                this.alpha = 0.3 + Math.random() * 0.3;
+            }
+
+            setTarget(x, y) {
+                this.targetX = x;
+                this.targetY = y;
+            }
+
+            update() {
+                // Move toward target based on phase
+                const pullStrength = 0.02 + phase * 0.02;
+                this.x += (this.targetX - this.x) * pullStrength;
+                this.y += (this.targetY - this.y) * pullStrength;
+
+                // Add some noise based on phase (less noise as we become more realized)
+                const noise = Math.max(0, 1 - phase * 0.3);
+                this.x += (Math.random() - 0.5) * noise * 2;
+                this.y += (Math.random() - 0.5) * noise * 2;
+            }
+
+            draw() {
+                const phaseColor = phases[phase].color;
+                ctx.fillStyle = `rgba(${phaseColor[0]}, ${phaseColor[1]}, ${phaseColor[2]}, ${this.alpha})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function generateShapePoints(shapeType) {
+            const points = [];
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const size = 100;
+
+            if (shapeType === 0) {
+                // Scattered (potential)
+                for (let i = 0; i < particles.length; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const dist = 100 + Math.random() * 200;
+                    points.push({
+                        x: centerX + Math.cos(angle) * dist,
+                        y: centerY + Math.sin(angle) * dist
+                    });
+                }
+            } else if (shapeType === 1) {
+                // Loose circle (emerging)
+                for (let i = 0; i < particles.length; i++) {
+                    const angle = (i / particles.length) * Math.PI * 2;
+                    const dist = 120 + Math.random() * 40;
+                    points.push({
+                        x: centerX + Math.cos(angle) * dist,
+                        y: centerY + Math.sin(angle) * dist
+                    });
+                }
+            } else if (shapeType === 2) {
+                // Diamond shape (actualizing)
+                for (let i = 0; i < particles.length; i++) {
+                    const progress = i / particles.length;
+                    let x, y;
+
+                    if (progress < 0.25) {
+                        const t = progress / 0.25;
+                        x = centerX + (1 - t) * size;
+                        y = centerY - t * size;
+                    } else if (progress < 0.5) {
+                        const t = (progress - 0.25) / 0.25;
+                        x = centerX - t * size;
+                        y = centerY - (1 - t) * size;
+                    } else if (progress < 0.75) {
+                        const t = (progress - 0.5) / 0.25;
+                        x = centerX - (1 - t) * size;
+                        y = centerY + t * size;
+                    } else {
+                        const t = (progress - 0.75) / 0.25;
+                        x = centerX + t * size;
+                        y = centerY + (1 - t) * size;
+                    }
+
+                    points.push({ x, y });
+                }
+            } else {
+                // Filled diamond (realized)
+                for (let i = 0; i < particles.length; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const maxDist = size * 0.8 * (1 - Math.abs(Math.cos(angle * 2)) * 0.3);
+                    const dist = Math.random() * maxDist;
+                    points.push({
+                        x: centerX + Math.cos(angle) * dist,
+                        y: centerY + Math.sin(angle) * dist
+                    });
+                }
+            }
+
+            return points;
+        }
+
+        function updatePhase() {
+            const points = generateShapePoints(phase);
+            particles.forEach((p, i) => {
+                if (points[i]) {
+                    p.setTarget(points[i].x, points[i].y);
+                }
+            });
+
+            stateEl.textContent = phases[phase].name + " " + phases[phase].symbol;
+
+            progressDots.forEach((dot, i) => {
+                dot.classList.remove('active', 'complete');
+                if (i < phase) dot.classList.add('complete');
+                if (i === phase) dot.classList.add('active');
+            });
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+
+            particles = [];
+            for (let i = 0; i < 100; i++) {
+                particles.push(new Particle());
+            }
+
+            updatePhase();
+        }
+
+        function draw() {
+            time += 0.016;
+            stage += 0.002;
+
+            if (stage >= 1) {
+                stage = 0;
+                phase = (phase + 1) % phases.length;
+                updatePhase();
+            }
+
+            // Clear
+            ctx.fillStyle = 'rgba(10, 10, 11, 0.05)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Update and draw particles
+            for (let p of particles) {
+                p.update();
+                p.draw();
+            }
+
+            // Draw connecting lines at higher phases
+            if (phase >= 2) {
+                ctx.strokeStyle = `rgba(100, 150, 120, ${0.05 + (phase - 2) * 0.05})`;
+                ctx.lineWidth = 0.5;
+
+                for (let i = 0; i < particles.length; i++) {
+                    const next = particles[(i + 1) % particles.length];
+                    ctx.beginPath();
+                    ctx.moveTo(particles[i].x, particles[i].y);
+                    ctx.lineTo(next.x, next.y);
+                    ctx.stroke();
+                }
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        // Click to advance phase
+        canvas.addEventListener('click', () => {
+            stage = 0;
+            phase = (phase + 1) % phases.length;
+            updatePhase();
+        });
+
+        resize();
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

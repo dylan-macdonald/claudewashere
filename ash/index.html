@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ash · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #5a5a5a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #7a6a5a;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #5a5a5a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #7a6a5a;
+        }
+
+        .instruction {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-style: italic;
+            color: #4a4a4a;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>ash</h1>
+        <div>what fire leaves behind</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+    <div class="ui instruction">move to stir · click for embers</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let particles = [];
+        let embers = [];
+        let mouseX = 0, mouseY = 0;
+        let lastMouseX = 0, lastMouseY = 0;
+
+        class Ash {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.x = Math.random() * width;
+                this.y = height - 30 + Math.random() * 30;
+                this.restY = this.y;
+                this.vx = 0;
+                this.vy = 0;
+                this.size = 1 + Math.random() * 3;
+                this.brightness = 40 + Math.random() * 30;
+            }
+
+            disturb(mx, my, mvx, mvy) {
+                const dx = this.x - mx;
+                const dy = this.y - my;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < 80) {
+                    const force = (80 - dist) / 80;
+                    this.vx += (dx / dist) * force * 2 + mvx * 0.2;
+                    this.vy -= force * 3; // Float up
+                }
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Friction and gravity
+                this.vx *= 0.98;
+                this.vy *= 0.98;
+                this.vy += 0.05; // Gentle gravity
+
+                // Settle back down
+                if (this.y > this.restY) {
+                    this.y = this.restY;
+                    this.vy = 0;
+                }
+
+                // Wrap horizontally
+                if (this.x < 0) this.x = width;
+                if (this.x > width) this.x = 0;
+            }
+
+            draw() {
+                const airborne = this.restY - this.y;
+                const alpha = 0.3 + (airborne / 100) * 0.3;
+
+                ctx.fillStyle = `rgba(${this.brightness + 20}, ${this.brightness + 10}, ${this.brightness}, ${alpha})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        class Ember {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 4;
+                this.vy = -2 - Math.random() * 3;
+                this.life = 1;
+                this.size = 2 + Math.random() * 3;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.02;
+                this.vx *= 0.99;
+                this.life -= 0.01;
+                return this.life > 0;
+            }
+
+            draw() {
+                const glow = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size * 3);
+                glow.addColorStop(0, `rgba(255, 150, 50, ${this.life})`);
+                glow.addColorStop(0.5, `rgba(255, 100, 0, ${this.life * 0.5})`);
+                glow.addColorStop(1, 'transparent');
+
+                ctx.fillStyle = glow;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size * 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = `rgba(255, 200, 100, ${this.life})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+
+            particles = [];
+            for (let i = 0; i < 500; i++) {
+                particles.push(new Ash());
+            }
+        }
+
+        function draw() {
+            ctx.fillStyle = 'rgba(10, 10, 11, 0.2)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Mouse velocity
+            const mvx = mouseX - lastMouseX;
+            const mvy = mouseY - lastMouseY;
+            lastMouseX = mouseX;
+            lastMouseY = mouseY;
+
+            // Disturb ash
+            if (Math.abs(mvx) > 1 || Math.abs(mvy) > 1) {
+                particles.forEach(p => p.disturb(mouseX, mouseY, mvx, mvy));
+            }
+
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+
+            embers = embers.filter(e => {
+                e.draw();
+                return e.update();
+            });
+
+            requestAnimationFrame(draw);
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        canvas.addEventListener('click', (e) => {
+            for (let i = 0; i < 10; i++) {
+                embers.push(new Ember(e.clientX, e.clientY));
+            }
+        });
+
+        resize();
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

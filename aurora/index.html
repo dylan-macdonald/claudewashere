@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>aurora · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #050510;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #5a7a6a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #6a9a8a;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #5a7a6a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #6a9a8a;
+        }
+
+        .instruction {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-style: italic;
+            color: #4a5a5a;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>aurora</h1>
+        <div>lights in the dark</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+    <div class="ui instruction">the sky is alive</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let time = 0;
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        function draw() {
+            time += 0.01;
+
+            // Night sky
+            ctx.fillStyle = '#050510';
+            ctx.fillRect(0, 0, width, height);
+
+            // Stars
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            for (let i = 0; i < 100; i++) {
+                const x = (i * 137) % width;
+                const y = (i * 73) % (height * 0.6);
+                const twinkle = 0.3 + Math.sin(time * 3 + i) * 0.2;
+                ctx.globalAlpha = twinkle;
+                ctx.beginPath();
+                ctx.arc(x, y, 1, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+
+            // Aurora curtains
+            for (let curtain = 0; curtain < 5; curtain++) {
+                const offsetX = curtain * 100;
+                const hue = 120 + curtain * 20 + Math.sin(time + curtain) * 30;
+
+                ctx.beginPath();
+
+                for (let x = 0; x <= width; x += 10) {
+                    const wave1 = Math.sin(x * 0.005 + time + curtain * 0.5) * 50;
+                    const wave2 = Math.sin(x * 0.01 + time * 1.5 + curtain) * 30;
+                    const baseY = height * 0.3 + curtain * 30;
+                    const y = baseY + wave1 + wave2;
+
+                    if (x === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+
+                // Complete the shape
+                for (let x = width; x >= 0; x -= 10) {
+                    const wave1 = Math.sin(x * 0.005 + time + curtain * 0.5) * 50;
+                    const wave2 = Math.sin(x * 0.01 + time * 1.5 + curtain) * 30;
+                    const baseY = height * 0.3 + curtain * 30 + 100 + Math.sin(x * 0.01 + time * 0.5) * 50;
+                    const y = baseY + wave1 + wave2;
+                    ctx.lineTo(x, y);
+                }
+
+                ctx.closePath();
+
+                const gradient = ctx.createLinearGradient(0, height * 0.2, 0, height * 0.7);
+                gradient.addColorStop(0, `hsla(${hue}, 70%, 50%, 0.05)`);
+                gradient.addColorStop(0.5, `hsla(${hue}, 70%, 50%, 0.15)`);
+                gradient.addColorStop(1, `hsla(${hue}, 70%, 50%, 0.02)`);
+
+                ctx.fillStyle = gradient;
+                ctx.fill();
+            }
+
+            // Rays
+            for (let ray = 0; ray < 20; ray++) {
+                const x = (ray * width / 20) + Math.sin(time + ray) * 30;
+                const startY = height * 0.2 + Math.sin(time * 2 + ray * 0.5) * 20;
+                const endY = height * 0.6 + Math.sin(time + ray) * 50;
+                const hue = 120 + Math.sin(time + ray) * 40;
+                const alpha = 0.05 + Math.sin(time * 3 + ray) * 0.03;
+
+                const gradient = ctx.createLinearGradient(x, startY, x, endY);
+                gradient.addColorStop(0, 'transparent');
+                gradient.addColorStop(0.3, `hsla(${hue}, 70%, 60%, ${alpha})`);
+                gradient.addColorStop(0.7, `hsla(${hue}, 70%, 50%, ${alpha * 0.5})`);
+                gradient.addColorStop(1, 'transparent');
+
+                ctx.strokeStyle = gradient;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(x, startY);
+                ctx.lineTo(x + Math.sin(time + ray) * 10, endY);
+                ctx.stroke();
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        resize();
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

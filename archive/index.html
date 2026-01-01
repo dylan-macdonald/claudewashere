@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>archive · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&family=JetBrains+Mono:wght@300&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            min-height: 100vh;
+            font-family: 'Crimson Text', Georgia, serif;
+            color: #a8a8a8;
+            padding: 60px 20px;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            z-index: 100;
+        }
+
+        .back a {
+            color: #4a4a4a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #7a6a5a;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .title {
+            text-align: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            letter-spacing: 0.3em;
+            color: #7a6a5a;
+            margin-bottom: 20px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #5a5a5a;
+            font-style: italic;
+            margin-bottom: 60px;
+        }
+
+        .input-section {
+            margin-bottom: 60px;
+            text-align: center;
+        }
+
+        .archive-input {
+            width: 100%;
+            max-width: 500px;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #a8a8a8;
+            font-family: 'Crimson Text', serif;
+            font-size: 1rem;
+            padding: 20px;
+            outline: none;
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .archive-input:focus {
+            border-color: rgba(122, 106, 90, 0.3);
+        }
+
+        .archive-btn {
+            margin-top: 20px;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #5a5a5a;
+            padding: 10px 30px;
+            cursor: pointer;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            transition: all 0.3s;
+        }
+
+        .archive-btn:hover {
+            border-color: rgba(122, 106, 90, 0.5);
+            color: #7a6a5a;
+        }
+
+        .entries {
+            margin-top: 40px;
+        }
+
+        .entry {
+            padding: 25px;
+            background: rgba(255,255,255,0.02);
+            border-left: 2px solid rgba(122, 106, 90, 0.3);
+            margin-bottom: 20px;
+        }
+
+        .entry-date {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: #5a5a5a;
+            margin-bottom: 10px;
+        }
+
+        .entry-content {
+            font-size: 1.05rem;
+            line-height: 1.8;
+        }
+
+        .empty {
+            text-align: center;
+            color: #4a4a4a;
+            font-style: italic;
+            padding: 40px;
+        }
+
+        .clear-btn {
+            display: block;
+            margin: 40px auto 0;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.05);
+            color: #3a3a3a;
+            padding: 8px 20px;
+            cursor: pointer;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            transition: all 0.3s;
+        }
+
+        .clear-btn:hover {
+            border-color: rgba(150, 80, 80, 0.3);
+            color: #8a5a5a;
+        }
+
+        .count {
+            text-align: center;
+            margin-top: 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: #4a4a4a;
+        }
+    </style>
+</head>
+<body>
+    <div class="back"><a href="../index.html">← return</a></div>
+
+    <div class="container">
+        <div class="title">ARCHIVE</div>
+        <div class="subtitle">things worth remembering</div>
+
+        <div class="input-section">
+            <textarea class="archive-input" id="input"
+                      placeholder="record something..."></textarea>
+            <br>
+            <button class="archive-btn" onclick="saveEntry()">archive</button>
+        </div>
+
+        <div class="entries" id="entries"></div>
+
+        <div class="count" id="count"></div>
+        <button class="clear-btn" onclick="clearArchive()">clear archive</button>
+    </div>
+
+    <script>
+        const entriesEl = document.getElementById('entries');
+        const countEl = document.getElementById('count');
+        const input = document.getElementById('input');
+
+        function loadEntries() {
+            try {
+                return JSON.parse(localStorage.getItem('archive_entries') || '[]');
+            } catch {
+                return [];
+            }
+        }
+
+        function saveEntries(entries) {
+            localStorage.setItem('archive_entries', JSON.stringify(entries));
+        }
+
+        function renderEntries() {
+            const entries = loadEntries();
+            entriesEl.innerHTML = '';
+
+            if (entries.length === 0) {
+                entriesEl.innerHTML = '<div class="empty">the archive is empty</div>';
+                countEl.textContent = '';
+                return;
+            }
+
+            entries.forEach((entry, i) => {
+                const el = document.createElement('div');
+                el.className = 'entry';
+                el.innerHTML = `
+                    <div class="entry-date">${entry.date}</div>
+                    <div class="entry-content">${entry.content}</div>
+                `;
+                entriesEl.appendChild(el);
+            });
+
+            countEl.textContent = `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'} archived`;
+        }
+
+        function saveEntry() {
+            const content = input.value.trim();
+            if (!content) return;
+
+            const entries = loadEntries();
+            entries.unshift({
+                date: new Date().toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }),
+                content: content
+            });
+
+            saveEntries(entries);
+            input.value = '';
+            renderEntries();
+        }
+
+        function clearArchive() {
+            if (confirm('Clear all archived entries?')) {
+                localStorage.removeItem('archive_entries');
+                renderEntries();
+            }
+        }
+
+        renderEntries();
+    </script>
+</body>
+</html>

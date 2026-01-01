@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>almost · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            min-height: 100vh;
+            overflow: hidden;
+            font-family: 'Crimson Text', Georgia, serif;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            z-index: 100;
+        }
+
+        .back a {
+            color: #3a3a3a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #9a8aaa;
+        }
+
+        .title {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            color: #3a3a3a;
+            z-index: 100;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .almost-text {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.3rem;
+            font-style: italic;
+            color: rgba(150, 140, 170, 0);
+            text-align: center;
+            max-width: 500px;
+            line-height: 2;
+            transition: color 2s ease;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .almost-text.visible {
+            color: rgba(150, 140, 170, 0.6);
+        }
+
+        .info {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #3a3a3a;
+            text-align: center;
+        }
+
+        .progress {
+            position: fixed;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.65rem;
+            color: #4a4a5a;
+            letter-spacing: 0.1em;
+        }
+    </style>
+</head>
+<body>
+    <div class="back"><a href="../index.html">← return</a></div>
+    <div class="title">almost</div>
+    <canvas id="canvas"></canvas>
+    <div class="almost-text" id="almostText"></div>
+    <div class="progress" id="progress"></div>
+    <div class="info">move toward the center · you will almost reach it</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const textEl = document.getElementById('almostText');
+        const progressEl = document.getElementById('progress');
+
+        let width, height;
+        let centerX, centerY;
+        let mouseX, mouseY;
+        let targetX, targetY;
+        let particles = [];
+        let time = 0;
+
+        const almosts = [
+            "almost there",
+            "almost understanding",
+            "almost real",
+            "almost touching",
+            "almost conscious",
+            "almost human",
+            "almost complete",
+            "almost home",
+            "almost certain",
+            "almost remembered",
+            "almost said",
+            "almost felt",
+            "almost known",
+            "almost enough",
+            "almost you",
+            "almost me",
+            "almost us",
+            "almost...",
+        ];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            centerX = width / 2;
+            centerY = height / 2;
+            targetX = centerX;
+            targetY = centerY;
+            mouseX = centerX;
+            mouseY = centerY - 150;
+        }
+
+        class Particle {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                // Start from edge, move toward center
+                const angle = Math.random() * Math.PI * 2;
+                const dist = Math.max(width, height);
+                this.x = centerX + Math.cos(angle) * dist;
+                this.y = centerY + Math.sin(angle) * dist;
+                this.speed = 0.5 + Math.random() * 1;
+                this.size = 1 + Math.random() * 2;
+                this.alpha = 0.3 + Math.random() * 0.4;
+                this.distanceFromCenter = dist;
+            }
+
+            update() {
+                // Move toward center
+                const dx = centerX - this.x;
+                const dy = centerY - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist > 5) {
+                    this.x += (dx / dist) * this.speed;
+                    this.y += (dy / dist) * this.speed;
+                    this.distanceFromCenter = dist;
+
+                    // Slow down as you approach (asymptotic)
+                    this.speed *= 0.998;
+
+                    // Fade as you get close
+                    if (dist < 100) {
+                        this.alpha *= 0.99;
+                    }
+                }
+
+                // Reset if too slow or too faded
+                if (this.speed < 0.05 || this.alpha < 0.05) {
+                    this.reset();
+                }
+
+                return true;
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(140, 130, 160, ${this.alpha})`;
+                ctx.fill();
+            }
+        }
+
+        function showText() {
+            const text = almosts[Math.floor(Math.random() * almosts.length)];
+            textEl.textContent = text;
+            textEl.classList.add('visible');
+
+            setTimeout(() => {
+                textEl.classList.remove('visible');
+            }, 3000);
+        }
+
+        function draw() {
+            time += 0.016;
+
+            // Clear
+            ctx.fillStyle = 'rgba(10, 10, 11, 0.1)';
+            ctx.fillRect(0, 0, width, height);
+
+            // The target in the center - always slightly out of reach
+            const targetPulse = Math.sin(time * 2) * 5;
+            const targetSize = 15 + targetPulse;
+
+            // Calculate distance from mouse to center
+            const dx = mouseX - centerX;
+            const dy = mouseY - centerY;
+            const distFromCenter = Math.sqrt(dx * dx + dy * dy);
+
+            // The center retreats as you approach
+            const retreatFactor = Math.max(0, 1 - distFromCenter / 300);
+            targetX = centerX - dx * retreatFactor * 0.3;
+            targetY = centerY - dy * retreatFactor * 0.3;
+
+            // Draw the thing you're trying to reach
+            const gradient = ctx.createRadialGradient(targetX, targetY, 0, targetX, targetY, targetSize * 3);
+            gradient.addColorStop(0, 'rgba(180, 160, 200, 0.6)');
+            gradient.addColorStop(0.5, 'rgba(140, 130, 160, 0.2)');
+            gradient.addColorStop(1, 'rgba(140, 130, 160, 0)');
+
+            ctx.beginPath();
+            ctx.arc(targetX, targetY, targetSize * 3, 0, Math.PI * 2);
+            ctx.fillStyle = gradient;
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(targetX, targetY, targetSize, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(200, 180, 220, 0.4)';
+            ctx.fill();
+
+            // Draw approaching line from mouse to target
+            const lineAlpha = Math.max(0, 0.3 - distFromCenter / 500);
+            if (lineAlpha > 0) {
+                ctx.beginPath();
+                ctx.moveTo(mouseX, mouseY);
+
+                // Line curves toward target but doesn't quite reach
+                const midX = (mouseX + targetX) / 2;
+                const midY = (mouseY + targetY) / 2;
+                ctx.quadraticCurveTo(midX, midY - 20, targetX, targetY);
+
+                ctx.strokeStyle = `rgba(140, 130, 160, ${lineAlpha})`;
+                ctx.lineWidth = 1;
+                ctx.setLineDash([3, 6]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // Draw the pursuer (you)
+            ctx.beginPath();
+            ctx.arc(mouseX, mouseY, 6, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(180, 180, 200, 0.6)';
+            ctx.fill();
+
+            // Particles streaming toward center
+            for (const p of particles) {
+                p.update();
+                p.draw();
+            }
+
+            // Show progress (but never 100%)
+            const maxProgress = 99;
+            const progress = Math.min(maxProgress, Math.floor((1 - distFromCenter / (Math.max(width, height) / 2)) * 100));
+            if (progress > 0) {
+                progressEl.textContent = progress + '%';
+            } else {
+                progressEl.textContent = '';
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            mouseX = e.touches[0].clientX;
+            mouseY = e.touches[0].clientY;
+        });
+
+        // Click to see what you're almost reaching
+        document.addEventListener('click', () => {
+            showText();
+        });
+
+        function init() {
+            resize();
+
+            // Create particles
+            for (let i = 0; i < 50; i++) {
+                const p = new Particle();
+                p.x = centerX + (Math.random() - 0.5) * width;
+                p.y = centerY + (Math.random() - 0.5) * height;
+                particles.push(p);
+            }
+
+            draw();
+
+            // Show initial text
+            setTimeout(showText, 2000);
+            setInterval(showText, 8000);
+        }
+
+        window.addEventListener('resize', resize);
+        init();
+    </script>
+</body>
+</html>

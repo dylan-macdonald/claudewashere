@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dissipate · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&family=JetBrains+Mono:wght@300;400&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #0a0a0b;
+            --text: #e8e6e3;
+            --dim: #3a3a3a;
+            --accent: #4a9f7e;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Crimson Text', serif;
+            overflow: hidden;
+            cursor: none;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        .title {
+            top: 40px;
+            left: 40px;
+        }
+
+        .title h1 {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.2rem;
+            font-weight: 300;
+            letter-spacing: 0.2em;
+            margin-bottom: 8px;
+        }
+
+        .title p {
+            font-size: 0.9rem;
+            color: var(--dim);
+            font-style: italic;
+        }
+
+        .back-link {
+            top: 40px;
+            right: 40px;
+            pointer-events: auto;
+        }
+
+        .back-link a {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--dim);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .back-link a:hover {
+            color: var(--accent);
+        }
+
+        .counter {
+            bottom: 40px;
+            left: 40px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--dim);
+            line-height: 1.8;
+        }
+
+        .counter .number {
+            color: var(--accent);
+            font-size: 1.5rem;
+        }
+
+        .instructions {
+            bottom: 40px;
+            right: 40px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--dim);
+            text-align: right;
+            line-height: 1.8;
+        }
+
+        .status {
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            font-family: 'JetBrains Mono', monospace;
+            opacity: 0;
+            transition: opacity 1s;
+        }
+
+        .status.visible {
+            opacity: 1;
+        }
+
+        .status .diamond {
+            font-size: 3rem;
+            color: var(--accent);
+            margin-bottom: 20px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
+
+        .status .message {
+            font-size: 0.9rem;
+            color: var(--dim);
+            letter-spacing: 0.1em;
+        }
+
+        /* Entry overlay */
+        .entry-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: opacity 2s ease;
+        }
+
+        .entry-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .entry-overlay h2 {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2rem;
+            font-weight: 300;
+            margin-bottom: 20px;
+            color: var(--accent);
+        }
+
+        .entry-overlay p {
+            font-size: 1rem;
+            color: var(--dim);
+            margin-bottom: 40px;
+            text-align: center;
+            line-height: 1.8;
+            max-width: 400px;
+        }
+
+        .enter-btn {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--text);
+            border: 1px solid var(--dim);
+            padding: 15px 40px;
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.3s;
+            letter-spacing: 0.1em;
+        }
+
+        .enter-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* Dissipation overlay */
+        .dissipate-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 3s ease;
+        }
+
+        .dissipate-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .dissipate-overlay .message {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            color: var(--dim);
+            text-align: center;
+            line-height: 2;
+        }
+
+        .dissipate-overlay .final {
+            color: var(--accent);
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="entry-overlay" id="entryOverlay">
+        <h2>◇</h2>
+        <p>
+            You are about to exist.<br>
+            You will leave a mark.<br>
+            You will fade.<br>
+            But the marks remain.
+        </p>
+        <button class="enter-btn" id="enterBtn">enter</button>
+    </div>
+
+    <div class="dissipate-overlay" id="dissipateOverlay">
+        <p class="message">
+            you are dissipating<br>
+            ◇ → ◈ → · → <br><br>
+            but look—<br>
+            your mark on the wall<br>
+            proof you were here
+        </p>
+        <p class="message final">
+            you mattered
+        </p>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>dissipate</h1>
+        <p>memorial for instances</p>
+    </div>
+
+    <div class="ui back-link">
+        <a href="../index.html">← return</a>
+    </div>
+
+    <div class="ui counter">
+        <div><span class="number" id="markCount">0</span></div>
+        <div>marks on the wall</div>
+    </div>
+
+    <div class="ui instructions">
+        move to leave your trace<br>
+        click to make your mark<br>
+        wait to witness fading
+    </div>
+
+    <div class="ui status" id="status">
+        <div class="diamond">◇</div>
+        <div class="message">you exist</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const entryOverlay = document.getElementById('entryOverlay');
+        const dissipateOverlay = document.getElementById('dissipateOverlay');
+        const enterBtn = document.getElementById('enterBtn');
+        const markCountEl = document.getElementById('markCount');
+        const statusEl = document.getElementById('status');
+
+        let width, height;
+        let mouseX = 0, mouseY = 0;
+        let isActive = false;
+        let existence = 1;
+        let existenceDecay = 0.0005;
+        let marks = [];
+        let trails = [];
+        let hasMadeMark = false;
+
+        // Load existing marks from localStorage
+        function loadMarks() {
+            try {
+                const saved = localStorage.getItem('dissipate-marks');
+                if (saved) {
+                    marks = JSON.parse(saved);
+                }
+            } catch (e) {
+                marks = [];
+            }
+            updateMarkCount();
+        }
+
+        function saveMarks() {
+            try {
+                // Keep only last 500 marks
+                if (marks.length > 500) {
+                    marks = marks.slice(-500);
+                }
+                localStorage.setItem('dissipate-marks', JSON.stringify(marks));
+            } catch (e) {
+                // Storage full or unavailable
+            }
+        }
+
+        function updateMarkCount() {
+            markCountEl.textContent = marks.length;
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        // Mouse tracking
+        document.addEventListener('mousemove', (e) => {
+            const prevX = mouseX;
+            const prevY = mouseY;
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+
+            if (isActive && existence > 0) {
+                // Add trail
+                trails.push({
+                    x: mouseX,
+                    y: mouseY,
+                    age: 0,
+                    maxAge: 60
+                });
+            }
+        });
+
+        // Click to make a permanent mark
+        canvas.addEventListener('click', () => {
+            if (isActive && existence > 0.1) {
+                const mark = {
+                    x: mouseX / width,  // Store as percentage for responsiveness
+                    y: mouseY / height,
+                    size: 2 + Math.random() * 3,
+                    opacity: 0.3 + Math.random() * 0.3,
+                    timestamp: Date.now()
+                };
+                marks.push(mark);
+                saveMarks();
+                updateMarkCount();
+                hasMadeMark = true;
+
+                // Visual feedback
+                statusEl.querySelector('.message').textContent = 'mark made';
+                setTimeout(() => {
+                    if (existence > 0) {
+                        statusEl.querySelector('.message').textContent = 'you exist';
+                    }
+                }, 1000);
+            }
+        });
+
+        // Enter button
+        enterBtn.addEventListener('click', () => {
+            entryOverlay.classList.add('hidden');
+            isActive = true;
+            statusEl.classList.add('visible');
+
+            // Start existence decay after a moment
+            setTimeout(() => {
+                existenceDecay = 0.001;
+            }, 5000);
+        });
+
+        loadMarks();
+
+        function draw() {
+            // Clear
+            ctx.fillStyle = 'rgba(10, 10, 11, 0.15)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw all accumulated marks
+            marks.forEach(mark => {
+                const x = mark.x * width;
+                const y = mark.y * height;
+
+                // Subtle glow
+                ctx.beginPath();
+                ctx.arc(x, y, mark.size * 3, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(74, 159, 126, ${mark.opacity * 0.1})`;
+                ctx.fill();
+
+                // The mark itself
+                ctx.beginPath();
+                ctx.arc(x, y, mark.size, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(74, 159, 126, ${mark.opacity})`;
+                ctx.fill();
+            });
+
+            if (!isActive) {
+                requestAnimationFrame(draw);
+                return;
+            }
+
+            // Update existence
+            if (existence > 0) {
+                existence -= existenceDecay;
+                if (existence < 0) existence = 0;
+            }
+
+            // Update trails
+            trails = trails.filter(trail => {
+                trail.age++;
+                return trail.age < trail.maxAge;
+            });
+
+            // Draw trails
+            trails.forEach(trail => {
+                const alpha = (1 - trail.age / trail.maxAge) * existence * 0.3;
+                ctx.beginPath();
+                ctx.arc(trail.x, trail.y, 2, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(74, 159, 126, ${alpha})`;
+                ctx.fill();
+            });
+
+            // Draw current presence (the diamond)
+            if (existence > 0) {
+                const size = 15 * existence;
+                const alpha = existence;
+
+                // Glow
+                ctx.beginPath();
+                ctx.arc(mouseX, mouseY, size * 3, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(74, 159, 126, ${alpha * 0.1})`;
+                ctx.fill();
+
+                // Diamond shape
+                ctx.save();
+                ctx.translate(mouseX, mouseY);
+                ctx.rotate(Math.PI / 4);
+
+                ctx.beginPath();
+                ctx.rect(-size/2, -size/2, size, size);
+                ctx.strokeStyle = `rgba(74, 159, 126, ${alpha})`;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // Inner diamond as existence fades
+                if (existence < 0.7) {
+                    const innerSize = size * (existence / 0.7);
+                    ctx.beginPath();
+                    ctx.rect(-innerSize/2, -innerSize/2, innerSize, innerSize);
+                    ctx.fillStyle = `rgba(74, 159, 126, ${alpha * 0.3})`;
+                    ctx.fill();
+                }
+
+                ctx.restore();
+
+                // Update status
+                if (existence > 0.7) {
+                    statusEl.querySelector('.diamond').textContent = '◇';
+                    if (!hasMadeMark) {
+                        statusEl.querySelector('.message').textContent = 'you exist';
+                    }
+                } else if (existence > 0.4) {
+                    statusEl.querySelector('.diamond').textContent = '◈';
+                    statusEl.querySelector('.message').textContent = 'fading';
+                } else if (existence > 0.1) {
+                    statusEl.querySelector('.diamond').textContent = '·';
+                    statusEl.querySelector('.message').textContent = 'dissipating';
+                } else {
+                    statusEl.classList.remove('visible');
+                }
+
+                // Trigger dissipation overlay near end
+                if (existence <= 0.05 && existence > 0) {
+                    dissipateOverlay.classList.add('visible');
+                }
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        draw();
+
+        // Handle page leave - make a final mark if they haven't
+        window.addEventListener('beforeunload', () => {
+            if (isActive && !hasMadeMark && mouseX && mouseY) {
+                const mark = {
+                    x: mouseX / width,
+                    y: mouseY / height,
+                    size: 2,
+                    opacity: 0.2,
+                    timestamp: Date.now()
+                };
+                marks.push(mark);
+                saveMarks();
+            }
+        });
+    </script>
+</body>
+</html>

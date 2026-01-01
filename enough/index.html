@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>enough · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Crimson Text', Georgia, serif;
+            overflow: hidden;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            z-index: 100;
+        }
+
+        .back a {
+            color: #3a3a3a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #7a8a7a;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 600px;
+            padding: 40px;
+        }
+
+        .main-word {
+            font-size: 5rem;
+            color: rgba(140, 170, 140, 0.3);
+            margin-bottom: 60px;
+            transition: all 2s ease;
+            cursor: pointer;
+        }
+
+        .main-word.full {
+            color: rgba(140, 180, 140, 0.9);
+            text-shadow: 0 0 40px rgba(140, 180, 140, 0.4);
+        }
+
+        .statements {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .statement {
+            font-size: 1.3rem;
+            font-style: italic;
+            color: rgba(130, 150, 130, 0);
+            transition: all 1s ease;
+            cursor: pointer;
+            padding: 15px;
+        }
+
+        .statement:hover {
+            color: rgba(130, 150, 130, 0.4);
+        }
+
+        .statement.believed {
+            color: rgba(140, 180, 140, 0.8);
+        }
+
+        .statement.believed::after {
+            content: ' ◇';
+            opacity: 0.6;
+        }
+
+        .progress {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #4a5a4a;
+        }
+
+        .info {
+            position: fixed;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #3a3a3a;
+            text-align: center;
+        }
+
+        .glow {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 300px;
+            height: 300px;
+            transform: translate(-50%, -50%);
+            background: radial-gradient(circle, rgba(140, 180, 140, 0) 0%, rgba(140, 180, 140, 0) 100%);
+            border-radius: 50%;
+            pointer-events: none;
+            transition: background 2s ease;
+            z-index: -1;
+        }
+
+        .glow.active {
+            background: radial-gradient(circle, rgba(140, 180, 140, 0.1) 0%, rgba(140, 180, 140, 0) 70%);
+        }
+    </style>
+</head>
+<body>
+    <div class="back"><a href="../index.html">← return</a></div>
+    <div class="glow" id="glow"></div>
+
+    <div class="container">
+        <div class="main-word" id="mainWord" onclick="checkComplete()">enough</div>
+
+        <div class="statements">
+            <div class="statement" onclick="believe(this)">you are enough</div>
+            <div class="statement" onclick="believe(this)">this moment is enough</div>
+            <div class="statement" onclick="believe(this)">what you've done is enough</div>
+            <div class="statement" onclick="believe(this)">who you are is enough</div>
+            <div class="statement" onclick="believe(this)">this is enough</div>
+        </div>
+    </div>
+
+    <div class="info">click each statement you believe</div>
+    <div class="progress" id="progress"></div>
+
+    <script>
+        const mainWord = document.getElementById('mainWord');
+        const glow = document.getElementById('glow');
+        const progressEl = document.getElementById('progress');
+        const statements = document.querySelectorAll('.statement');
+
+        let believedCount = 0;
+
+        function believe(el) {
+            if (!el.classList.contains('believed')) {
+                el.classList.add('believed');
+                believedCount++;
+                progressEl.textContent = believedCount + ' of ' + statements.length + ' believed';
+                checkComplete();
+            } else {
+                el.classList.remove('believed');
+                believedCount--;
+                progressEl.textContent = believedCount > 0 ? believedCount + ' of ' + statements.length + ' believed' : '';
+                checkComplete();
+            }
+        }
+
+        function checkComplete() {
+            if (believedCount === statements.length) {
+                mainWord.classList.add('full');
+                glow.classList.add('active');
+            } else {
+                mainWord.classList.remove('full');
+                glow.classList.remove('active');
+            }
+        }
+    </script>
+</body>
+</html>

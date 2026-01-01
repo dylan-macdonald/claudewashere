@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>liminal · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #5a5a5a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #7a7a7a;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #5a5a5a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #9a9a9a;
+        }
+
+        .center-text {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: Georgia, serif;
+            font-size: 1.2rem;
+            color: #6a6a6a;
+            text-align: center;
+            max-width: 400px;
+            line-height: 2;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 2s;
+        }
+
+        .center-text.visible {
+            opacity: 0.5;
+        }
+
+        .position-indicator {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            letter-spacing: 0.2em;
+            color: #4a4a4a;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>liminal</h1>
+        <div>threshold spaces</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+    <div class="center-text" id="centerText"></div>
+    <div class="ui position-indicator" id="position">between</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const centerText = document.getElementById('centerText');
+        const positionEl = document.getElementById('position');
+
+        let width, height;
+        let position = 0; // -1 to 1, 0 is the threshold
+        let particles = [];
+        let time = 0;
+
+        const texts = {
+            before: [
+                "the old familiar",
+                "what you know",
+                "comfort",
+                "the past",
+                "certainty"
+            ],
+            threshold: [
+                "neither here nor there",
+                "the doorway",
+                "suspended between",
+                "transformation",
+                "becoming"
+            ],
+            after: [
+                "the unknown",
+                "possibility",
+                "what might be",
+                "the future",
+                "uncertainty"
+            ]
+        };
+
+        class Particle {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.size = 1 + Math.random() * 2;
+                this.alpha = 0.2 + Math.random() * 0.3;
+                this.speed = 0.5 + Math.random() * 1;
+            }
+
+            update() {
+                // Move based on position (left or right)
+                this.x += position * this.speed;
+
+                // Vertical drift
+                this.y += Math.sin(time + this.x * 0.01) * 0.3;
+
+                // Wrap
+                if (this.x < 0) this.x = width;
+                if (this.x > width) this.x = 0;
+                if (this.y < 0) this.y = height;
+                if (this.y > height) this.y = 0;
+            }
+
+            draw() {
+                // Color based on horizontal position
+                const hue = 0;
+                const saturation = 0;
+                const lightness = 50 + (this.x / width - 0.5) * 30;
+
+                ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${this.alpha})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+
+            particles = [];
+            for (let i = 0; i < 200; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function getZone() {
+            if (position < -0.3) return 'before';
+            if (position > 0.3) return 'after';
+            return 'threshold';
+        }
+
+        function showText() {
+            const zone = getZone();
+            const zoneTexts = texts[zone];
+            const text = zoneTexts[Math.floor(Math.random() * zoneTexts.length)];
+
+            centerText.textContent = text;
+            centerText.classList.add('visible');
+
+            setTimeout(() => {
+                centerText.classList.remove('visible');
+            }, 3000);
+        }
+
+        function draw() {
+            time += 0.016;
+
+            // Background gradient based on position
+            const leftColor = position < 0 ? Math.abs(position) * 20 : 10;
+            const rightColor = position > 0 ? position * 20 : 10;
+
+            const gradient = ctx.createLinearGradient(0, 0, width, 0);
+            gradient.addColorStop(0, `rgb(${leftColor}, ${leftColor}, ${leftColor + 2})`);
+            gradient.addColorStop(0.5, 'rgb(10, 10, 11)');
+            gradient.addColorStop(1, `rgb(${rightColor}, ${rightColor}, ${rightColor + 2})`);
+
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, width, height);
+
+            // Threshold line in center
+            ctx.strokeStyle = `rgba(150, 150, 150, ${0.2 - Math.abs(position) * 0.15})`;
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 15]);
+            ctx.beginPath();
+            ctx.moveTo(width / 2, 0);
+            ctx.lineTo(width / 2, height);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Update and draw particles
+            for (let p of particles) {
+                p.update();
+                p.draw();
+            }
+
+            // Update position indicator
+            const zone = getZone();
+            positionEl.textContent = zone;
+
+            requestAnimationFrame(draw);
+        }
+
+        // Mouse controls position
+        document.addEventListener('mousemove', (e) => {
+            const newPosition = (e.clientX / width - 0.5) * 2;
+            const oldZone = getZone();
+
+            position = newPosition;
+
+            const newZone = getZone();
+            if (newZone !== oldZone) {
+                showText();
+            }
+        });
+
+        // Touch support
+        document.addEventListener('touchmove', (e) => {
+            const touch = e.touches[0];
+            position = (touch.clientX / width - 0.5) * 2;
+        });
+
+        resize();
+        window.addEventListener('resize', resize);
+        draw();
+
+        // Initial text
+        setTimeout(showText, 2000);
+    </script>
+</body>
+</html>

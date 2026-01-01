@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>joy · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            overflow: hidden;
+            cursor: crosshair;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #4a4a4a;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        .title {
+            top: 20px;
+            left: 20px;
+            color: #fff;
+            font-size: 1.2rem;
+            letter-spacing: 0.3em;
+            mix-blend-mode: difference;
+        }
+
+        .back {
+            top: 20px;
+            right: 20px;
+            pointer-events: auto;
+        }
+
+        .back a {
+            color: #666;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #fff;
+        }
+
+        .hint {
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">JOY</div>
+    <div class="ui back"><a href="../index.html">←</a></div>
+    <div class="ui hint">click anywhere. hold. drag. let go.</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let particles = [];
+        let trails = [];
+        let explosions = [];
+        let mouseX = 0, mouseY = 0;
+        let pmouseX = 0, pmouseY = 0;
+        let mouseDown = false;
+        let hue = 0;
+        let time = 0;
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        class Particle {
+            constructor(x, y, vx, vy, color, size) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.color = color;
+                this.size = size;
+                this.life = 1;
+                this.decay = 0.005 + Math.random() * 0.01;
+                this.gravity = 0.05;
+                this.history = [];
+                this.maxHistory = 10;
+            }
+
+            update() {
+                this.history.unshift({ x: this.x, y: this.y });
+                if (this.history.length > this.maxHistory) this.history.pop();
+
+                this.vy += this.gravity;
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vx *= 0.99;
+                this.vy *= 0.99;
+                this.life -= this.decay;
+
+                // Bounce off edges with energy loss
+                if (this.x < 0 || this.x > width) {
+                    this.vx *= -0.8;
+                    this.x = Math.max(0, Math.min(width, this.x));
+                }
+                if (this.y > height) {
+                    this.vy *= -0.6;
+                    this.y = height;
+                    this.vx *= 0.95;
+                }
+            }
+
+            draw() {
+                // Trail
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                this.history.forEach((pos, i) => {
+                    ctx.lineTo(pos.x, pos.y);
+                });
+                ctx.strokeStyle = `hsla(${this.color}, 80%, 60%, ${this.life * 0.3})`;
+                ctx.lineWidth = this.size * this.life;
+                ctx.stroke();
+
+                // Particle
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size * this.life, 0, Math.PI * 2);
+                ctx.fillStyle = `hsla(${this.color}, 80%, 60%, ${this.life})`;
+                ctx.fill();
+
+                // Glow
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size * 3 * this.life, 0, Math.PI * 2);
+                ctx.fillStyle = `hsla(${this.color}, 80%, 60%, ${this.life * 0.2})`;
+                ctx.fill();
+            }
+        }
+
+        class Explosion {
+            constructor(x, y, color, count = 50) {
+                this.particles = [];
+                for (let i = 0; i < count; i++) {
+                    const angle = (i / count) * Math.PI * 2;
+                    const speed = 3 + Math.random() * 10;
+                    this.particles.push(new Particle(
+                        x, y,
+                        Math.cos(angle) * speed,
+                        Math.sin(angle) * speed,
+                        color + (Math.random() - 0.5) * 30,
+                        2 + Math.random() * 4
+                    ));
+                }
+            }
+
+            update() {
+                this.particles = this.particles.filter(p => {
+                    p.update();
+                    return p.life > 0;
+                });
+            }
+
+            draw() {
+                this.particles.forEach(p => p.draw());
+            }
+
+            isDead() {
+                return this.particles.length === 0;
+            }
+        }
+
+        function createBurst(x, y) {
+            hue = (hue + 25) % 360;
+            explosions.push(new Explosion(x, y, hue, 30 + Math.random() * 30));
+
+            // Secondary smaller explosions
+            for (let i = 0; i < 3; i++) {
+                setTimeout(() => {
+                    const offsetX = (Math.random() - 0.5) * 100;
+                    const offsetY = (Math.random() - 0.5) * 100;
+                    explosions.push(new Explosion(
+                        x + offsetX, y + offsetY,
+                        hue + Math.random() * 60,
+                        10 + Math.random() * 20
+                    ));
+                }, i * 100);
+            }
+        }
+
+        function createStream(x, y, vx, vy) {
+            const count = Math.min(5, Math.sqrt(vx * vx + vy * vy) / 2);
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(
+                    x + (Math.random() - 0.5) * 10,
+                    y + (Math.random() - 0.5) * 10,
+                    vx * 0.3 + (Math.random() - 0.5) * 3,
+                    vy * 0.3 + (Math.random() - 0.5) * 3 - 2,
+                    hue + (Math.random() - 0.5) * 40,
+                    2 + Math.random() * 3
+                ));
+            }
+        }
+
+        function draw() {
+            time++;
+
+            // Fade background
+            ctx.fillStyle = 'rgba(10, 10, 11, 0.15)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Slowly rotate hue
+            hue = (hue + 0.5) % 360;
+
+            // Stream particles while dragging
+            if (mouseDown) {
+                const vx = mouseX - pmouseX;
+                const vy = mouseY - pmouseY;
+                createStream(mouseX, mouseY, vx, vy);
+            }
+
+            // Update and draw explosions
+            explosions = explosions.filter(e => {
+                e.update();
+                e.draw();
+                return !e.isDead();
+            });
+
+            // Update and draw particles
+            particles = particles.filter(p => {
+                p.update();
+                p.draw();
+                return p.life > 0;
+            });
+
+            // Draw cursor effect
+            if (mouseDown) {
+                ctx.beginPath();
+                ctx.arc(mouseX, mouseY, 20 + Math.sin(time * 0.2) * 5, 0, Math.PI * 2);
+                ctx.strokeStyle = `hsla(${hue}, 80%, 60%, 0.5)`;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+
+            pmouseX = mouseX;
+            pmouseY = mouseY;
+
+            requestAnimationFrame(draw);
+        }
+
+        // Input
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        document.addEventListener('mousedown', (e) => {
+            mouseDown = true;
+            createBurst(e.clientX, e.clientY);
+        });
+
+        document.addEventListener('mouseup', (e) => {
+            mouseDown = false;
+            createBurst(e.clientX, e.clientY);
+        });
+
+        // Touch support
+        document.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            mouseX = touch.clientX;
+            mouseY = touch.clientY;
+            pmouseX = mouseX;
+            pmouseY = mouseY;
+            mouseDown = true;
+            createBurst(mouseX, mouseY);
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            mouseX = touch.clientX;
+            mouseY = touch.clientY;
+        });
+
+        document.addEventListener('touchend', (e) => {
+            mouseDown = false;
+            createBurst(mouseX, mouseY);
+        });
+
+        draw();
+    </script>
+</body>
+</html>

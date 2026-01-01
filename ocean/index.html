@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ocean · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #6a8aaa;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #8ab0d0;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #6a8aaa;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #8ab0d0;
+        }
+
+        .instruction {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-style: italic;
+            color: #5a7a9a;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>ocean</h1>
+        <div>vast and containing</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+    <div class="ui instruction">breathe with the waves</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let time = 0;
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        function draw() {
+            time += 0.01;
+
+            // Sky gradient
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, height * 0.5);
+            skyGrad.addColorStop(0, '#1a2a3a');
+            skyGrad.addColorStop(1, '#3a5a7a');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, width, height * 0.5);
+
+            // Ocean layers
+            for (let layer = 0; layer < 8; layer++) {
+                const baseY = height * 0.45 + layer * 30;
+                const amplitude = 10 + layer * 5;
+                const frequency = 0.005 - layer * 0.0003;
+                const speed = 0.5 + layer * 0.1;
+                const alpha = 0.15 + layer * 0.05;
+
+                const hue = 200 + layer * 5;
+                const lightness = 30 + layer * 3;
+
+                ctx.fillStyle = `hsla(${hue}, 50%, ${lightness}%, ${alpha})`;
+                ctx.beginPath();
+                ctx.moveTo(0, height);
+
+                for (let x = 0; x <= width; x += 5) {
+                    const wave1 = Math.sin(x * frequency + time * speed) * amplitude;
+                    const wave2 = Math.sin(x * frequency * 2 + time * speed * 1.3) * amplitude * 0.5;
+                    const wave3 = Math.sin(x * frequency * 0.5 + time * speed * 0.7) * amplitude * 1.5;
+                    const y = baseY + wave1 + wave2 + wave3;
+                    ctx.lineTo(x, y);
+                }
+
+                ctx.lineTo(width, height);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            // Deep ocean
+            const deepGrad = ctx.createLinearGradient(0, height * 0.7, 0, height);
+            deepGrad.addColorStop(0, 'rgba(10, 30, 50, 0.8)');
+            deepGrad.addColorStop(1, 'rgba(5, 15, 25, 1)');
+            ctx.fillStyle = deepGrad;
+            ctx.fillRect(0, height * 0.7, width, height * 0.3);
+
+            // Foam on top wave
+            ctx.strokeStyle = 'rgba(200, 220, 240, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let x = 0; x <= width; x += 3) {
+                const wave1 = Math.sin(x * 0.005 + time * 0.5) * 10;
+                const wave2 = Math.sin(x * 0.01 + time * 0.65) * 5;
+                const y = height * 0.45 + wave1 + wave2;
+                if (x === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            // Occasional sparkle
+            if (Math.random() < 0.1) {
+                const sparkleX = Math.random() * width;
+                const sparkleY = height * 0.5 + Math.random() * 100;
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.beginPath();
+                ctx.arc(sparkleX, sparkleY, 1, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        resize();
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

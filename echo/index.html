@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>echo · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            min-height: 100vh;
+            font-family: 'Crimson Text', Georgia, serif;
+            color: #a8a8a8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            overflow: hidden;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            z-index: 100;
+        }
+
+        .back a {
+            color: #4a4a4a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #6a6a8a;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 500px;
+        }
+
+        .title {
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            letter-spacing: 0.3em;
+            color: #6a6a8a;
+            margin-bottom: 40px;
+        }
+
+        .input-container {
+            margin-bottom: 40px;
+        }
+
+        .echo-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            color: #a8a8a8;
+            font-family: 'Crimson Text', serif;
+            font-size: 1.3rem;
+            padding: 15px 0;
+            text-align: center;
+            outline: none;
+        }
+
+        .echo-input:focus {
+            border-color: rgba(106, 106, 138, 0.5);
+        }
+
+        .echo-input::placeholder {
+            color: #4a4a4a;
+            font-style: italic;
+        }
+
+        .echoes {
+            position: relative;
+            min-height: 300px;
+        }
+
+        .echo {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.2rem;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            animation: echoFade 6s ease-out forwards;
+        }
+
+        @keyframes echoFade {
+            0% {
+                opacity: 0.8;
+                transform: translateX(-50%) translateY(0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-200px) scale(0.5);
+            }
+        }
+
+        .instruction {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #3a3a3a;
+        }
+    </style>
+</head>
+<body>
+    <div class="back"><a href="../index.html">← return</a></div>
+
+    <div class="container">
+        <div class="title">ECHO</div>
+
+        <div class="input-container">
+            <input type="text" class="echo-input" id="input"
+                   placeholder="speak into the void..."
+                   autocomplete="off">
+        </div>
+
+        <div class="echoes" id="echoes"></div>
+    </div>
+
+    <div class="instruction">press enter to send your words into the void</div>
+
+    <script>
+        const input = document.getElementById('input');
+        const echoes = document.getElementById('echoes');
+
+        function createEcho(text) {
+            const echo = document.createElement('div');
+            echo.className = 'echo';
+            echo.textContent = text;
+
+            // Random starting position
+            echo.style.top = (Math.random() * 50 + 50) + 'px';
+
+            // Random color variation
+            const hue = 240 + Math.random() * 40;
+            const lightness = 40 + Math.random() * 20;
+            echo.style.color = `hsl(${hue}, 20%, ${lightness}%)`;
+
+            // Slight horizontal variation
+            const offset = (Math.random() - 0.5) * 100;
+            echo.style.marginLeft = offset + 'px';
+
+            echoes.appendChild(echo);
+
+            // Create multiple delayed echoes
+            for (let i = 1; i <= 3; i++) {
+                setTimeout(() => {
+                    const delayed = echo.cloneNode(true);
+                    delayed.style.top = (parseFloat(echo.style.top) + i * 20) + 'px';
+                    delayed.style.opacity = 0.6 - i * 0.15;
+                    delayed.style.fontSize = (1.2 - i * 0.1) + 'rem';
+                    delayed.style.marginLeft = (offset + (Math.random() - 0.5) * 50) + 'px';
+                    echoes.appendChild(delayed);
+
+                    setTimeout(() => delayed.remove(), 6000);
+                }, i * 800);
+            }
+
+            // Remove original after animation
+            setTimeout(() => echo.remove(), 6000);
+        }
+
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && input.value.trim()) {
+                createEcho(input.value.trim());
+                input.value = '';
+            }
+        });
+
+        // Also echo on blur if there's content
+        input.addEventListener('blur', () => {
+            if (input.value.trim()) {
+                createEcho(input.value.trim());
+                input.value = '';
+            }
+        });
+    </script>
+</body>
+</html>

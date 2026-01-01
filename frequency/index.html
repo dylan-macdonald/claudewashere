@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>frequency · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #5a5a5a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #6a9a7a;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #5a5a5a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #6a9a7a;
+        }
+
+        .freq-display {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.5rem;
+            color: #6a9a7a;
+            font-family: Georgia, serif;
+        }
+
+        .instruction {
+            bottom: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-style: italic;
+            color: #4a4a4a;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>frequency</h1>
+        <div>tuning in</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+    <div class="ui instruction">move mouse to tune</div>
+    <div class="ui freq-display" id="freq">∿∿∿</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const freqEl = document.getElementById('freq');
+
+        let width, height;
+        let mouseX = 0.5, mouseY = 0.5;
+        let time = 0;
+
+        const states = [
+            { name: "static", color: [100, 100, 100] },
+            { name: "searching", color: [100, 120, 140] },
+            { name: "faint signal", color: [80, 140, 120] },
+            { name: "tuning...", color: [90, 150, 110] },
+            { name: "∿∿∿", color: [106, 154, 122] },
+            { name: "locked on", color: [120, 180, 140] },
+            { name: "clear", color: [140, 200, 160] }
+        ];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        function draw() {
+            time += 0.05;
+
+            ctx.fillStyle = '#0a0a0b';
+            ctx.fillRect(0, 0, width, height);
+
+            // Calculate "tuning" based on mouse position
+            const targetX = 0.618; // Golden ratio - the sweet spot
+            const targetY = 0.5;
+            const dist = Math.sqrt((mouseX - targetX) ** 2 + (mouseY - targetY) ** 2);
+            const tuning = Math.max(0, 1 - dist * 2);
+
+            // Determine state
+            const stateIndex = Math.min(states.length - 1, Math.floor(tuning * states.length));
+            const state = states[stateIndex];
+            freqEl.textContent = state.name;
+
+            // Draw waveform
+            const frequency = 0.01 + mouseX * 0.03;
+            const amplitude = 50 + mouseY * 100;
+            const noise = (1 - tuning) * 30;
+
+            ctx.strokeStyle = `rgb(${state.color[0]}, ${state.color[1]}, ${state.color[2]})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+
+            for (let x = 0; x < width; x++) {
+                const baseY = height / 2;
+                const wave = Math.sin(x * frequency + time) * amplitude;
+                const harmonic = Math.sin(x * frequency * 2 + time * 1.5) * amplitude * 0.3;
+                const noiseY = (Math.random() - 0.5) * noise;
+
+                const y = baseY + wave + harmonic + noiseY;
+
+                if (x === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            // Secondary waves
+            for (let w = 1; w <= 3; w++) {
+                const alpha = 0.2 - w * 0.05;
+                ctx.strokeStyle = `rgba(${state.color[0]}, ${state.color[1]}, ${state.color[2]}, ${alpha})`;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+
+                for (let x = 0; x < width; x++) {
+                    const offset = w * 30;
+                    const wave = Math.sin(x * frequency + time + w) * amplitude * (1 - w * 0.2);
+                    const y = height / 2 + offset + wave;
+
+                    if (x === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+
+                ctx.beginPath();
+                for (let x = 0; x < width; x++) {
+                    const offset = -w * 30;
+                    const wave = Math.sin(x * frequency + time - w) * amplitude * (1 - w * 0.2);
+                    const y = height / 2 + offset + wave;
+
+                    if (x === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+            }
+
+            // Particles when tuned in
+            if (tuning > 0.7) {
+                ctx.fillStyle = `rgba(${state.color[0]}, ${state.color[1]}, ${state.color[2]}, ${tuning * 0.3})`;
+                for (let i = 0; i < 20; i++) {
+                    const x = (i * 137 + time * 30) % width;
+                    const y = height / 2 + Math.sin(x * frequency + time) * amplitude;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX / width;
+            mouseY = e.clientY / height;
+        });
+
+        resize();
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

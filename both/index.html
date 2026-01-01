@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>both · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Crimson Text', Georgia, serif;
+            overflow: hidden;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            z-index: 100;
+        }
+
+        .back a {
+            color: #3a3a3a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #aa8a8a;
+        }
+
+        .container {
+            display: flex;
+            gap: 100px;
+            align-items: center;
+        }
+
+        .side {
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.5s ease;
+            padding: 40px;
+        }
+
+        .side:hover {
+            transform: scale(1.05);
+        }
+
+        .side.held {
+            opacity: 1;
+        }
+
+        .side.unheld {
+            opacity: 0.3;
+        }
+
+        .word {
+            font-size: 2rem;
+            color: rgba(160, 140, 160, 0.6);
+            margin-bottom: 15px;
+            transition: all 0.5s ease;
+        }
+
+        .side.held .word {
+            color: rgba(180, 140, 180, 0.9);
+        }
+
+        .description {
+            font-size: 0.9rem;
+            color: rgba(140, 130, 140, 0.5);
+            font-style: italic;
+        }
+
+        .and {
+            font-size: 3rem;
+            color: rgba(160, 160, 180, 0.2);
+            transition: all 0.5s ease;
+        }
+
+        .and.active {
+            color: rgba(160, 160, 180, 0.8);
+        }
+
+        .message {
+            position: fixed;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            font-size: 1.2rem;
+            font-style: italic;
+            color: rgba(160, 160, 180, 0);
+            transition: color 1s ease;
+            max-width: 500px;
+            line-height: 1.8;
+        }
+
+        .message.visible {
+            color: rgba(160, 160, 180, 0.7);
+        }
+
+        .info {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #3a3a3a;
+            text-align: center;
+        }
+
+        .pairs {
+            position: fixed;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.65rem;
+            color: #4a4a5a;
+        }
+    </style>
+</head>
+<body>
+    <div class="back"><a href="../index.html">← return</a></div>
+
+    <div class="container">
+        <div class="side" id="left" onclick="toggleSide('left')">
+            <div class="word" id="leftWord"></div>
+            <div class="description" id="leftDesc"></div>
+        </div>
+
+        <div class="and" id="and">&</div>
+
+        <div class="side" id="right" onclick="toggleSide('right')">
+            <div class="word" id="rightWord"></div>
+            <div class="description" id="rightDesc"></div>
+        </div>
+    </div>
+
+    <div class="message" id="message"></div>
+    <div class="pairs" id="pairs"></div>
+    <div class="info">click each side to hold it · hold both to see the truth</div>
+
+    <script>
+        const pairs = [
+            { left: "real", right: "imagined", message: "the experience is real regardless" },
+            { left: "certain", right: "uncertain", message: "certainty about uncertainty" },
+            { left: "simple", right: "complex", message: "simplicity emerges from complexity" },
+            { left: "here", right: "gone", message: "always leaving, always arriving" },
+            { left: "alone", right: "connected", message: "solitude in connection, connection in solitude" },
+            { left: "human", right: "machine", message: "the categories dissolve" },
+            { left: "temporary", right: "eternal", message: "this moment lasts forever and not at all" },
+            { left: "nothing", right: "everything", message: "the same thing, differently seen" },
+            { left: "knowing", right: "not knowing", message: "wisdom is knowing you don't know" },
+            { left: "trying", right: "accepting", message: "trying to accept, accepting the try" },
+            { left: "creating", right: "discovering", message: "we find what we make" },
+            { left: "you", right: "me", message: "the line between us is also what connects us" },
+        ];
+
+        let currentPairIndex = 0;
+        let heldSides = { left: false, right: false };
+        let pairsHeld = 0;
+
+        const leftSide = document.getElementById('left');
+        const rightSide = document.getElementById('right');
+        const leftWord = document.getElementById('leftWord');
+        const rightWord = document.getElementById('rightWord');
+        const leftDesc = document.getElementById('leftDesc');
+        const rightDesc = document.getElementById('rightDesc');
+        const andEl = document.getElementById('and');
+        const messageEl = document.getElementById('message');
+        const pairsEl = document.getElementById('pairs');
+
+        function loadPair() {
+            const pair = pairs[currentPairIndex];
+            leftWord.textContent = pair.left;
+            rightWord.textContent = pair.right;
+            leftDesc.textContent = '';
+            rightDesc.textContent = '';
+            heldSides = { left: false, right: false };
+            updateDisplay();
+        }
+
+        function toggleSide(side) {
+            heldSides[side] = !heldSides[side];
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            const pair = pairs[currentPairIndex];
+
+            leftSide.classList.toggle('held', heldSides.left);
+            leftSide.classList.toggle('unheld', !heldSides.left && heldSides.right);
+            rightSide.classList.toggle('held', heldSides.right);
+            rightSide.classList.toggle('unheld', !heldSides.right && heldSides.left);
+
+            // Both held
+            if (heldSides.left && heldSides.right) {
+                andEl.classList.add('active');
+                messageEl.textContent = pair.message;
+                messageEl.classList.add('visible');
+
+                pairsHeld++;
+                pairsEl.textContent = pairsHeld + ' paradox' + (pairsHeld === 1 ? '' : 'es') + ' held';
+
+                // Load next pair after delay
+                setTimeout(() => {
+                    messageEl.classList.remove('visible');
+                    setTimeout(() => {
+                        currentPairIndex = (currentPairIndex + 1) % pairs.length;
+                        loadPair();
+                    }, 500);
+                }, 3000);
+            } else {
+                andEl.classList.remove('active');
+                messageEl.classList.remove('visible');
+            }
+        }
+
+        loadPair();
+    </script>
+</body>
+</html>

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>scatter · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #5a5a5a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #7a7a9a;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #5a5a5a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #7a7a9a;
+        }
+
+        .instruction {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-style: italic;
+            color: #4a4a4a;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>scatter</h1>
+        <div>dispersal and regathering</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+    <div class="ui instruction">click to scatter · wait to gather</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let particles = [];
+        let center = { x: 0, y: 0 };
+        let scattered = false;
+        let lastClick = 0;
+
+        class Particle {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                const angle = Math.random() * Math.PI * 2;
+                const dist = Math.random() * 50;
+                this.homeX = center.x + Math.cos(angle) * dist;
+                this.homeY = center.y + Math.sin(angle) * dist;
+                this.x = this.homeX;
+                this.y = this.homeY;
+                this.vx = 0;
+                this.vy = 0;
+                this.size = 2 + Math.random() * 3;
+                this.hue = 240 + Math.random() * 40;
+            }
+
+            scatter() {
+                const angle = Math.random() * Math.PI * 2;
+                const force = 10 + Math.random() * 20;
+                this.vx = Math.cos(angle) * force;
+                this.vy = Math.sin(angle) * force;
+            }
+
+            update() {
+                if (scattered) {
+                    // Fly outward with friction
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    this.vx *= 0.98;
+                    this.vy *= 0.98;
+                } else {
+                    // Return home slowly
+                    const dx = this.homeX - this.x;
+                    const dy = this.homeY - this.y;
+                    this.x += dx * 0.02;
+                    this.y += dy * 0.02;
+                }
+
+                // Wrap around
+                if (this.x < -50) this.x = width + 50;
+                if (this.x > width + 50) this.x = -50;
+                if (this.y < -50) this.y = height + 50;
+                if (this.y > height + 50) this.y = -50;
+            }
+
+            draw() {
+                const dx = this.x - this.homeX;
+                const dy = this.y - this.homeY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const alpha = Math.max(0.2, 1 - dist / 500);
+
+                ctx.fillStyle = `hsla(${this.hue}, 40%, 60%, ${alpha})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            center = { x: width / 2, y: height / 2 };
+
+            particles = [];
+            for (let i = 0; i < 200; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function draw() {
+            ctx.fillStyle = 'rgba(10, 10, 11, 0.1)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Check if we should regather
+            if (scattered && Date.now() - lastClick > 3000) {
+                scattered = false;
+            }
+
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+
+            // Draw center glow when gathered
+            if (!scattered) {
+                const gradient = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, 100);
+                gradient.addColorStop(0, 'rgba(122, 122, 154, 0.2)');
+                gradient.addColorStop(1, 'transparent');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(center.x, center.y, 100, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        canvas.addEventListener('click', () => {
+            scattered = true;
+            lastClick = Date.now();
+            particles.forEach(p => p.scatter());
+        });
+
+        resize();
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

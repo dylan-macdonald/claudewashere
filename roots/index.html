@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>roots · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #5a5a5a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #6a5a4a;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #5a5a5a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #6a5a4a;
+        }
+
+        .instruction {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-style: italic;
+            color: #4a4a4a;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>roots</h1>
+        <div>where we come from</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+    <div class="ui instruction">click to plant · watch it grow</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let roots = [];
+
+        class Root {
+            constructor(x, y, angle, depth = 0, parent = null) {
+                this.x = x;
+                this.y = y;
+                this.startX = x;
+                this.startY = y;
+                this.angle = angle;
+                this.depth = depth;
+                this.parent = parent;
+                this.length = 0;
+                this.maxLength = 50 + Math.random() * 100 - depth * 15;
+                this.thickness = Math.max(1, 8 - depth * 1.5);
+                this.growing = true;
+                this.children = [];
+                this.branched = false;
+                this.hue = 25 + Math.random() * 15;
+            }
+
+            grow() {
+                if (!this.growing) return;
+
+                this.length += 1 + Math.random() * 2;
+
+                // Slight wandering
+                this.angle += (Math.random() - 0.5) * 0.1;
+
+                // Gravity pulls down slightly
+                if (this.y < height * 0.5) {
+                    this.angle += 0.01;
+                }
+
+                this.x = this.startX + Math.cos(this.angle) * this.length;
+                this.y = this.startY + Math.sin(this.angle) * this.length;
+
+                // Branch occasionally
+                if (!this.branched && this.length > this.maxLength * 0.3 && this.depth < 5 && Math.random() < 0.02) {
+                    this.branch();
+                }
+
+                if (this.length >= this.maxLength) {
+                    this.growing = false;
+                    // Maybe spawn children at the end
+                    if (this.depth < 4 && Math.random() < 0.7) {
+                        const numChildren = 1 + Math.floor(Math.random() * 2);
+                        for (let i = 0; i < numChildren; i++) {
+                            const childAngle = this.angle + (Math.random() - 0.5) * 1.2;
+                            this.children.push(new Root(this.x, this.y, childAngle, this.depth + 1, this));
+                            roots.push(this.children[this.children.length - 1]);
+                        }
+                    }
+                }
+
+                // Grow children
+                this.children.forEach(child => child.grow());
+            }
+
+            branch() {
+                this.branched = true;
+                const branchAngle = this.angle + (Math.random() > 0.5 ? 1 : -1) * (0.3 + Math.random() * 0.5);
+                const branch = new Root(this.x, this.y, branchAngle, this.depth + 1, this);
+                this.children.push(branch);
+                roots.push(branch);
+            }
+
+            draw() {
+                if (this.length < 1) return;
+
+                const alpha = Math.max(0.3, 1 - this.depth * 0.15);
+                ctx.strokeStyle = `hsla(${this.hue}, 30%, ${30 - this.depth * 3}%, ${alpha})`;
+                ctx.lineWidth = this.thickness;
+                ctx.lineCap = 'round';
+
+                ctx.beginPath();
+                ctx.moveTo(this.startX, this.startY);
+                ctx.lineTo(this.x, this.y);
+                ctx.stroke();
+
+                // Small glow at tip if growing
+                if (this.growing) {
+                    ctx.fillStyle = `hsla(${this.hue}, 40%, 50%, 0.3)`;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.thickness + 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        function draw() {
+            ctx.fillStyle = 'rgba(10, 10, 11, 0.05)';
+            ctx.fillRect(0, 0, width, height);
+
+            roots.forEach(root => {
+                root.grow();
+                root.draw();
+            });
+
+            requestAnimationFrame(draw);
+        }
+
+        canvas.addEventListener('click', (e) => {
+            // Create a new root system
+            const startY = e.clientY;
+            const angles = [
+                Math.PI / 2 + (Math.random() - 0.5) * 0.3,
+                Math.PI / 2 + 0.3 + Math.random() * 0.2,
+                Math.PI / 2 - 0.3 - Math.random() * 0.2
+            ];
+
+            angles.forEach(angle => {
+                roots.push(new Root(e.clientX, startY, angle));
+            });
+        });
+
+        resize();
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

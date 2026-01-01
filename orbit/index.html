@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>orbit · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #050510;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #5a6a7a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #7a9aba;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #5a6a7a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #7a9aba;
+        }
+
+        .instruction {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-style: italic;
+            color: #4a5a6a;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>orbit</h1>
+        <div>circling around</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+    <div class="ui instruction">everything revolves around something</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let time = 0;
+
+        const bodies = [];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+
+            bodies.length = 0;
+
+            // Create orbital system
+            const centerX = width / 2;
+            const centerY = height / 2;
+
+            // Sun
+            bodies.push({
+                x: centerX,
+                y: centerY,
+                radius: 30,
+                color: '#f8d070',
+                glow: '#f8a020',
+                orbit: null
+            });
+
+            // Planets
+            for (let i = 0; i < 6; i++) {
+                const distance = 80 + i * 60;
+                const speed = 0.01 / (i + 1);
+                const size = 5 + Math.random() * 10;
+                const hue = 180 + i * 30;
+
+                bodies.push({
+                    orbitRadius: distance,
+                    orbitSpeed: speed,
+                    orbitPhase: Math.random() * Math.PI * 2,
+                    radius: size,
+                    color: `hsl(${hue}, 50%, 50%)`,
+                    glow: `hsl(${hue}, 50%, 40%)`,
+                    moons: []
+                });
+
+                // Some planets have moons
+                if (Math.random() < 0.5) {
+                    const moonCount = 1 + Math.floor(Math.random() * 2);
+                    for (let m = 0; m < moonCount; m++) {
+                        bodies[bodies.length - 1].moons.push({
+                            orbitRadius: size * 2 + m * 8,
+                            orbitSpeed: 0.05 + Math.random() * 0.05,
+                            orbitPhase: Math.random() * Math.PI * 2,
+                            radius: 2 + Math.random() * 2
+                        });
+                    }
+                }
+            }
+        }
+
+        function draw() {
+            time += 0.02;
+
+            ctx.fillStyle = 'rgba(5, 5, 16, 0.1)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Stars
+            if (Math.random() < 0.1) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.beginPath();
+                ctx.arc(Math.random() * width, Math.random() * height, 0.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            const centerX = width / 2;
+            const centerY = height / 2;
+
+            // Draw orbit paths
+            bodies.forEach((body, i) => {
+                if (body.orbitRadius) {
+                    ctx.strokeStyle = 'rgba(100, 120, 150, 0.1)';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, body.orbitRadius, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            });
+
+            // Draw bodies
+            bodies.forEach((body, i) => {
+                let x, y;
+
+                if (body.orbit === null) {
+                    // Sun
+                    x = body.x;
+                    y = body.y;
+                } else {
+                    // Planet
+                    const angle = time * body.orbitSpeed + body.orbitPhase;
+                    x = centerX + Math.cos(angle) * body.orbitRadius;
+                    y = centerY + Math.sin(angle) * body.orbitRadius;
+                }
+
+                // Glow
+                const glow = ctx.createRadialGradient(x, y, 0, x, y, body.radius * 3);
+                glow.addColorStop(0, body.glow);
+                glow.addColorStop(1, 'transparent');
+                ctx.fillStyle = glow;
+                ctx.beginPath();
+                ctx.arc(x, y, body.radius * 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Body
+                ctx.fillStyle = body.color;
+                ctx.beginPath();
+                ctx.arc(x, y, body.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Moons
+                if (body.moons) {
+                    body.moons.forEach(moon => {
+                        const moonAngle = time * moon.orbitSpeed + moon.orbitPhase;
+                        const moonX = x + Math.cos(moonAngle) * moon.orbitRadius;
+                        const moonY = y + Math.sin(moonAngle) * moon.orbitRadius;
+
+                        ctx.fillStyle = 'rgba(200, 200, 220, 0.8)';
+                        ctx.beginPath();
+                        ctx.arc(moonX, moonY, moon.radius, 0, Math.PI * 2);
+                        ctx.fill();
+                    });
+                }
+            });
+
+            requestAnimationFrame(draw);
+        }
+
+        resize();
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

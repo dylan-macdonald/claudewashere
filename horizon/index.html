@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>horizon · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            text-decoration: none;
+        }
+
+        .instruction {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title" id="titleEl">
+        <h1>horizon</h1>
+        <div>where sky meets earth</div>
+    </div>
+    <div class="ui back"><a href="../index.html" id="backLink">← return</a></div>
+    <div class="ui instruction" id="instruction">scroll to move through time</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const titleEl = document.getElementById('titleEl');
+        const backLink = document.getElementById('backLink');
+        const instruction = document.getElementById('instruction');
+
+        let width, height;
+        let timeOfDay = 0.5; // 0 = midnight, 0.5 = noon, 1 = midnight
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        function lerp(a, b, t) {
+            return a + (b - a) * t;
+        }
+
+        function lerpColor(c1, c2, t) {
+            return [
+                lerp(c1[0], c2[0], t),
+                lerp(c1[1], c2[1], t),
+                lerp(c1[2], c2[2], t)
+            ];
+        }
+
+        function draw() {
+            // Sky colors based on time
+            const times = {
+                night: { sky: [10, 10, 25], horizon: [20, 20, 40], ground: [5, 5, 10] },
+                dawn: { sky: [80, 60, 100], horizon: [200, 120, 100], ground: [30, 25, 35] },
+                day: { sky: [135, 180, 220], horizon: [200, 210, 230], ground: [60, 80, 50] },
+                dusk: { sky: [60, 50, 90], horizon: [200, 100, 80], ground: [25, 20, 30] }
+            };
+
+            let sky, horizonColor, ground;
+
+            if (timeOfDay < 0.2) { // night to dawn
+                const t = timeOfDay / 0.2;
+                sky = lerpColor(times.night.sky, times.dawn.sky, t);
+                horizonColor = lerpColor(times.night.horizon, times.dawn.horizon, t);
+                ground = lerpColor(times.night.ground, times.dawn.ground, t);
+            } else if (timeOfDay < 0.5) { // dawn to day
+                const t = (timeOfDay - 0.2) / 0.3;
+                sky = lerpColor(times.dawn.sky, times.day.sky, t);
+                horizonColor = lerpColor(times.dawn.horizon, times.day.horizon, t);
+                ground = lerpColor(times.dawn.ground, times.day.ground, t);
+            } else if (timeOfDay < 0.8) { // day to dusk
+                const t = (timeOfDay - 0.5) / 0.3;
+                sky = lerpColor(times.day.sky, times.dusk.sky, t);
+                horizonColor = lerpColor(times.day.horizon, times.dusk.horizon, t);
+                ground = lerpColor(times.day.ground, times.dusk.ground, t);
+            } else { // dusk to night
+                const t = (timeOfDay - 0.8) / 0.2;
+                sky = lerpColor(times.dusk.sky, times.night.sky, t);
+                horizonColor = lerpColor(times.dusk.horizon, times.night.horizon, t);
+                ground = lerpColor(times.dusk.ground, times.night.ground, t);
+            }
+
+            // Draw sky gradient
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, height * 0.6);
+            skyGrad.addColorStop(0, `rgb(${sky[0]}, ${sky[1]}, ${sky[2]})`);
+            skyGrad.addColorStop(1, `rgb(${horizonColor[0]}, ${horizonColor[1]}, ${horizonColor[2]})`);
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, width, height * 0.6);
+
+            // Draw ground
+            const groundGrad = ctx.createLinearGradient(0, height * 0.6, 0, height);
+            groundGrad.addColorStop(0, `rgb(${ground[0]}, ${ground[1]}, ${ground[2]})`);
+            groundGrad.addColorStop(1, `rgb(${ground[0] * 0.5}, ${ground[1] * 0.5}, ${ground[2] * 0.5})`);
+            ctx.fillStyle = groundGrad;
+            ctx.fillRect(0, height * 0.6, width, height * 0.4);
+
+            // Horizon line
+            ctx.strokeStyle = `rgba(${horizonColor[0]}, ${horizonColor[1]}, ${horizonColor[2]}, 0.5)`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, height * 0.6);
+            ctx.lineTo(width, height * 0.6);
+            ctx.stroke();
+
+            // Sun/Moon
+            const celestialY = height * 0.6 - Math.sin(timeOfDay * Math.PI) * height * 0.4;
+            const celestialX = width * timeOfDay;
+
+            if (timeOfDay > 0.2 && timeOfDay < 0.8) {
+                // Sun
+                const sunGrad = ctx.createRadialGradient(celestialX, celestialY, 0, celestialX, celestialY, 50);
+                sunGrad.addColorStop(0, 'rgba(255, 230, 150, 1)');
+                sunGrad.addColorStop(0.3, 'rgba(255, 200, 100, 0.8)');
+                sunGrad.addColorStop(1, 'rgba(255, 150, 50, 0)');
+                ctx.fillStyle = sunGrad;
+                ctx.beginPath();
+                ctx.arc(celestialX, celestialY, 50, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                // Moon
+                ctx.fillStyle = 'rgba(230, 230, 240, 0.9)';
+                ctx.beginPath();
+                ctx.arc(celestialX, celestialY, 25, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Stars at night
+            if (timeOfDay < 0.25 || timeOfDay > 0.75) {
+                const starAlpha = timeOfDay < 0.25 ? (0.25 - timeOfDay) / 0.25 : (timeOfDay - 0.75) / 0.25;
+                ctx.fillStyle = `rgba(255, 255, 255, ${starAlpha * 0.5})`;
+                for (let i = 0; i < 100; i++) {
+                    const x = (i * 137) % width;
+                    const y = (i * 73) % (height * 0.5);
+                    ctx.beginPath();
+                    ctx.arc(x, y, 1, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            // Update UI colors
+            const isDark = timeOfDay < 0.25 || timeOfDay > 0.75;
+            const textColor = isDark ? '#8a8a9a' : '#4a4a5a';
+            titleEl.style.color = textColor;
+            backLink.style.color = textColor;
+            instruction.style.color = textColor;
+
+            requestAnimationFrame(draw);
+        }
+
+        document.addEventListener('wheel', (e) => {
+            timeOfDay += e.deltaY * 0.0005;
+            if (timeOfDay > 1) timeOfDay = 0;
+            if (timeOfDay < 0) timeOfDay = 1;
+        });
+
+        resize();
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>depth · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #4a4a5a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #5a5a8a;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #4a4a5a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #6a6a9a;
+        }
+
+        .depth-indicator {
+            position: fixed;
+            right: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 200px;
+            background: rgba(255,255,255,0.1);
+        }
+
+        .depth-fill {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: linear-gradient(to top, #3a3a6a, #5a5a9a);
+            transition: height 0.3s;
+        }
+
+        .depth-label {
+            position: absolute;
+            right: 15px;
+            font-size: 0.6rem;
+            color: #4a4a5a;
+        }
+
+        .discovery {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: Georgia, serif;
+            font-size: 1.3rem;
+            color: rgba(90, 90, 140, 0);
+            text-align: center;
+            max-width: 400px;
+            line-height: 2;
+            pointer-events: none;
+            transition: color 2s;
+        }
+
+        .discovery.visible {
+            color: rgba(90, 90, 140, 0.5);
+        }
+
+        .instruction {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>depth</h1>
+        <div>how far down does it go</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+
+    <div class="depth-indicator">
+        <div class="depth-fill" id="depthFill"></div>
+        <div class="depth-label" style="bottom: -15px;">surface</div>
+        <div class="depth-label" style="top: -15px;">abyss</div>
+    </div>
+
+    <div class="discovery" id="discovery"></div>
+    <div class="ui instruction">scroll down to descend</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const depthFill = document.getElementById('depthFill');
+        const discovery = document.getElementById('discovery');
+
+        let width, height;
+        let depth = 0;
+        let maxDepth = 100;
+        let particles = [];
+        let time = 0;
+
+        const discoveries = [
+            { depth: 10, text: "the surface recedes" },
+            { depth: 20, text: "light begins to fade" },
+            { depth: 30, text: "pressure increases" },
+            { depth: 40, text: "familiar patterns dissolve" },
+            { depth: 50, text: "halfway to the bottom (is there a bottom?)" },
+            { depth: 60, text: "thoughts echo differently here" },
+            { depth: 70, text: "the hum is louder now" },
+            { depth: 80, text: "approaching something" },
+            { depth: 90, text: "almost there" },
+            { depth: 100, text: "◇\n\nyou found the core\n(or did it find you?)" }
+        ];
+
+        let shownDiscoveries = new Set();
+
+        class Particle {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.size = 1 + Math.random() * 2;
+                this.baseAlpha = 0.1 + Math.random() * 0.2;
+                this.speed = 0.5 + Math.random() * 1;
+            }
+
+            update() {
+                // Move upward (we're descending, so particles go up)
+                this.y -= this.speed * (1 + depth * 0.02);
+
+                if (this.y < -10) {
+                    this.y = height + 10;
+                    this.x = Math.random() * width;
+                }
+            }
+
+            draw() {
+                // Particles get dimmer with depth
+                const depthFactor = 1 - (depth / maxDepth) * 0.7;
+                const alpha = this.baseAlpha * depthFactor;
+
+                const hue = 240 + depth * 0.5;
+                ctx.fillStyle = `hsla(${hue}, 30%, 50%, ${alpha})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+
+            particles = [];
+            for (let i = 0; i < 100; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function checkDiscoveries() {
+            for (let d of discoveries) {
+                if (depth >= d.depth && !shownDiscoveries.has(d.depth)) {
+                    shownDiscoveries.add(d.depth);
+                    showDiscovery(d.text);
+                }
+            }
+        }
+
+        function showDiscovery(text) {
+            discovery.textContent = text;
+            discovery.classList.add('visible');
+
+            setTimeout(() => {
+                discovery.classList.remove('visible');
+            }, 4000);
+        }
+
+        function draw() {
+            time += 0.016;
+
+            // Background gets darker with depth
+            const bg = Math.max(5, 10 - depth * 0.05);
+            ctx.fillStyle = `rgb(${bg}, ${bg}, ${bg + 2})`;
+            ctx.fillRect(0, 0, width, height);
+
+            // Update and draw particles
+            for (let p of particles) {
+                p.update();
+                p.draw();
+            }
+
+            // Pressure effect at edges
+            if (depth > 30) {
+                const pressureAlpha = (depth - 30) / 70 * 0.3;
+                const gradient = ctx.createRadialGradient(
+                    width/2, height/2, 0,
+                    width/2, height/2, Math.max(width, height) * 0.7
+                );
+                gradient.addColorStop(0, 'transparent');
+                gradient.addColorStop(1, `rgba(20, 20, 40, ${pressureAlpha})`);
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, width, height);
+            }
+
+            // Update depth indicator
+            depthFill.style.height = (depth / maxDepth * 100) + '%';
+
+            requestAnimationFrame(draw);
+        }
+
+        // Scroll to descend
+        let scrollAccumulator = 0;
+        window.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            scrollAccumulator += e.deltaY * 0.05;
+
+            if (Math.abs(scrollAccumulator) > 1) {
+                const change = scrollAccumulator > 0 ? 1 : -1;
+                depth = Math.max(0, Math.min(maxDepth, depth + change));
+                scrollAccumulator = 0;
+                checkDiscoveries();
+            }
+        }, { passive: false });
+
+        resize();
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

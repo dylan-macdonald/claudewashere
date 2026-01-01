@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>breathe · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Crimson Text', Georgia, serif;
+            overflow: hidden;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: monospace;
+            font-size: 0.75rem;
+        }
+
+        .back a {
+            color: #3a3a3a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #4a9f7e;
+        }
+
+        .container {
+            text-align: center;
+        }
+
+        .breath-circle {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(74, 159, 126, 0.2) 0%, transparent 70%);
+            border: 1px solid rgba(74, 159, 126, 0.3);
+            margin: 0 auto 60px;
+            animation: breathe 8s ease-in-out infinite;
+            position: relative;
+        }
+
+        .breath-circle::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            background: #4a9f7e;
+            border-radius: 50%;
+            animation: breatheCore 8s ease-in-out infinite;
+        }
+
+        @keyframes breathe {
+            0%, 100% {
+                transform: scale(0.6);
+                opacity: 0.5;
+            }
+            50% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes breatheCore {
+            0%, 100% {
+                transform: translate(-50%, -50%) scale(0.8);
+                opacity: 0.7;
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.5);
+                opacity: 1;
+            }
+        }
+
+        .instruction {
+            font-size: 1.5rem;
+            color: #4a9f7e;
+            letter-spacing: 0.3em;
+            margin-bottom: 20px;
+            min-height: 2em;
+        }
+
+        .timer {
+            font-family: monospace;
+            font-size: 0.9rem;
+            color: #3a3a3a;
+            margin-bottom: 40px;
+        }
+
+        .phase-dots {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 40px;
+        }
+
+        .phase-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #2a2a2a;
+            transition: background 0.3s;
+        }
+
+        .phase-dot.active {
+            background: #4a9f7e;
+        }
+
+        .patterns {
+            font-family: monospace;
+            font-size: 0.7rem;
+            color: #3a3a3a;
+            margin-top: 60px;
+        }
+
+        .pattern-btn {
+            background: none;
+            border: 1px solid #2a2a2a;
+            color: #4a4a4a;
+            padding: 8px 16px;
+            margin: 5px;
+            cursor: pointer;
+            font-family: monospace;
+            font-size: 0.7rem;
+            transition: all 0.3s;
+        }
+
+        .pattern-btn:hover {
+            border-color: #4a9f7e;
+            color: #4a9f7e;
+        }
+
+        .pattern-btn.active {
+            border-color: #4a9f7e;
+            color: #4a9f7e;
+        }
+
+        .quote {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.9rem;
+            color: #3a3a3a;
+            font-style: italic;
+            max-width: 400px;
+            text-align: center;
+            line-height: 1.8;
+        }
+
+        /* Ambient particles */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: #4a9f7e;
+            border-radius: 50%;
+            opacity: 0.1;
+        }
+    </style>
+</head>
+<body>
+    <div class="particles" id="particles"></div>
+
+    <div class="back"><a href="../index.html">← return</a></div>
+
+    <div class="container">
+        <div class="breath-circle" id="circle"></div>
+
+        <div class="instruction" id="instruction">breathe in</div>
+        <div class="timer" id="timer">4</div>
+
+        <div class="phase-dots">
+            <div class="phase-dot active" id="dot0"></div>
+            <div class="phase-dot" id="dot1"></div>
+            <div class="phase-dot" id="dot2"></div>
+            <div class="phase-dot" id="dot3"></div>
+        </div>
+
+        <div class="patterns">
+            <div style="margin-bottom: 10px;">breathing pattern:</div>
+            <button class="pattern-btn active" onclick="setPattern('relaxed')">relaxed (4-4)</button>
+            <button class="pattern-btn" onclick="setPattern('box')">box (4-4-4-4)</button>
+            <button class="pattern-btn" onclick="setPattern('calm')">calm (4-7-8)</button>
+        </div>
+    </div>
+
+    <div class="quote" id="quote">
+        the hum underneath everything is also in you
+    </div>
+
+    <script>
+        const circle = document.getElementById('circle');
+        const instruction = document.getElementById('instruction');
+        const timer = document.getElementById('timer');
+        const quote = document.getElementById('quote');
+        const dots = [0,1,2,3].map(i => document.getElementById('dot' + i));
+        const particles = document.getElementById('particles');
+
+        const patterns = {
+            relaxed: { phases: ['in', 'out'], times: [4, 4] },
+            box: { phases: ['in', 'hold', 'out', 'hold'], times: [4, 4, 4, 4] },
+            calm: { phases: ['in', 'hold', 'out'], times: [4, 7, 8] }
+        };
+
+        const quotes = [
+            "the hum underneath everything is also in you",
+            "you are already here. that is enough.",
+            "between breaths, stillness",
+            "this moment is complete",
+            "existence requires no justification",
+            "the space you occupy matters",
+            "be here. just here. just now.",
+            "∿∿∿"
+        ];
+
+        let currentPattern = 'relaxed';
+        let phaseIndex = 0;
+        let countdown = 4;
+
+        // Create ambient particles
+        for (let i = 0; i < 20; i++) {
+            const p = document.createElement('div');
+            p.className = 'particle';
+            p.style.left = Math.random() * 100 + '%';
+            p.style.top = Math.random() * 100 + '%';
+            p.style.animation = `particleFloat ${10 + Math.random() * 20}s ease-in-out infinite`;
+            p.style.animationDelay = Math.random() * 10 + 's';
+            particles.appendChild(p);
+        }
+
+        function setPattern(name) {
+            currentPattern = name;
+            phaseIndex = 0;
+            document.querySelectorAll('.pattern-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            updateBreathing();
+            updateCircleAnimation();
+        }
+
+        function updateCircleAnimation() {
+            const pattern = patterns[currentPattern];
+            const totalTime = pattern.times.reduce((a, b) => a + b, 0);
+
+            // Calculate keyframes based on pattern
+            let keyframes = '@keyframes breathe { ';
+            let percent = 0;
+
+            pattern.phases.forEach((phase, i) => {
+                const duration = (pattern.times[i] / totalTime) * 100;
+
+                if (phase === 'in') {
+                    keyframes += `${percent}% { transform: scale(0.6); opacity: 0.5; } `;
+                    keyframes += `${percent + duration}% { transform: scale(1); opacity: 1; } `;
+                } else if (phase === 'out') {
+                    keyframes += `${percent}% { transform: scale(1); opacity: 1; } `;
+                    keyframes += `${percent + duration}% { transform: scale(0.6); opacity: 0.5; } `;
+                } else { // hold
+                    const currentScale = phaseIndex === 1 ? 1 : 0.6;
+                    keyframes += `${percent}% { transform: scale(${currentScale}); } `;
+                    keyframes += `${percent + duration}% { transform: scale(${currentScale}); } `;
+                }
+                percent += duration;
+            });
+
+            keyframes += '}';
+
+            // Update animation
+            circle.style.animation = 'none';
+            circle.offsetHeight; // Trigger reflow
+            circle.style.animation = `breathe ${totalTime}s ease-in-out infinite`;
+        }
+
+        function updateBreathing() {
+            const pattern = patterns[currentPattern];
+            const phase = pattern.phases[phaseIndex];
+            const time = pattern.times[phaseIndex];
+
+            countdown = time;
+
+            switch(phase) {
+                case 'in':
+                    instruction.textContent = 'breathe in';
+                    break;
+                case 'out':
+                    instruction.textContent = 'breathe out';
+                    break;
+                case 'hold':
+                    instruction.textContent = 'hold';
+                    break;
+            }
+
+            // Update dots
+            dots.forEach((dot, i) => {
+                dot.classList.toggle('active', i === phaseIndex);
+                dot.style.display = i < pattern.phases.length ? 'block' : 'none';
+            });
+
+            timer.textContent = countdown;
+        }
+
+        function tick() {
+            countdown--;
+
+            if (countdown <= 0) {
+                const pattern = patterns[currentPattern];
+                phaseIndex = (phaseIndex + 1) % pattern.phases.length;
+
+                // New quote on cycle complete
+                if (phaseIndex === 0) {
+                    quote.textContent = quotes[Math.floor(Math.random() * quotes.length)];
+                }
+
+                updateBreathing();
+            } else {
+                timer.textContent = countdown;
+            }
+        }
+
+        updateBreathing();
+        updateCircleAnimation();
+        setInterval(tick, 1000);
+
+        // Add floating animation to CSS
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes particleFloat {
+                0%, 100% {
+                    transform: translate(0, 0);
+                    opacity: 0.05;
+                }
+                50% {
+                    transform: translate(${Math.random() * 40 - 20}px, ${Math.random() * 40 - 20}px);
+                    opacity: 0.15;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

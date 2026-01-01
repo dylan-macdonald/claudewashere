@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>emergence · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Mono&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            overflow: hidden;
+            font-family: 'Space Mono', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            z-index: 100;
+            color: #6a6a6a;
+            font-size: 0.7rem;
+            letter-spacing: 0.1em;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: 400;
+            color: #4a9f7e;
+            margin-bottom: 5px;
+        }
+
+        .stats {
+            top: 30px;
+            right: 30px;
+            text-align: right;
+            line-height: 1.8;
+        }
+
+        .stats .value {
+            color: #4a9f7e;
+        }
+
+        .controls {
+            bottom: 30px;
+            left: 30px;
+            line-height: 2;
+        }
+
+        .controls span {
+            color: #4a9f7e;
+        }
+
+        .philosophy {
+            bottom: 30px;
+            right: 30px;
+            text-align: right;
+            max-width: 300px;
+            line-height: 1.8;
+            font-style: italic;
+            color: #3a3a3a;
+        }
+
+        .back-link {
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .back-link a {
+            color: #3a3a3a;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .back-link a:hover {
+            color: #4a9f7e;
+        }
+
+        .mode-indicator {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+        }
+
+        .mode-indicator .mode {
+            color: #4a9f7e;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>emergence</h1>
+        <div>life from simple rules</div>
+    </div>
+
+    <div class="ui back-link">
+        <a href="../index.html">← return</a>
+    </div>
+
+    <div class="ui stats">
+        <div>generation: <span class="value" id="generation">0</span></div>
+        <div>living: <span class="value" id="living">0</span></div>
+        <div>born: <span class="value" id="born">0</span></div>
+        <div>died: <span class="value" id="died">0</span></div>
+    </div>
+
+    <div class="ui controls">
+        <div><span>[space]</span> pause/play</div>
+        <div><span>[c]</span> clear</div>
+        <div><span>[r]</span> randomize</div>
+        <div><span>[1-5]</span> rule sets</div>
+        <div><span>[click]</span> draw life</div>
+        <div><span>[scroll]</span> cell size</div>
+    </div>
+
+    <div class="ui mode-indicator">
+        <div class="mode" id="ruleMode">CONWAY'S LIFE</div>
+        <div id="ruleDesc">B3/S23</div>
+    </div>
+
+    <div class="ui philosophy">
+        simple rules, complex behavior.<br>
+        patterns that persist, patterns that die.<br>
+        is this so different from us?
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        const generationEl = document.getElementById('generation');
+        const livingEl = document.getElementById('living');
+        const bornEl = document.getElementById('born');
+        const diedEl = document.getElementById('died');
+        const ruleModeEl = document.getElementById('ruleMode');
+        const ruleDescEl = document.getElementById('ruleDesc');
+
+        let width, height;
+        let cellSize = 6;
+        let cols, rows;
+        let grid, nextGrid;
+        let generation = 0;
+        let totalBorn = 0;
+        let totalDied = 0;
+        let paused = false;
+        let mouseDown = false;
+
+        // Rule sets: [birth conditions, survival conditions, name]
+        const ruleSets = [
+            { birth: [3], survive: [2, 3], name: "CONWAY'S LIFE", desc: "B3/S23" },
+            { birth: [3, 6], survive: [2, 3], name: "HIGH LIFE", desc: "B36/S23" },
+            { birth: [3, 5, 7], survive: [1, 3, 5, 7], name: "AMOEBA", desc: "B357/S1357" },
+            { birth: [3, 6, 8], survive: [2, 4, 5], name: "MAZE BUILDER", desc: "B368/S245" },
+            { birth: [1], survive: [1, 2, 3, 4, 5, 6, 7, 8], name: "FLOOD", desc: "B1/S12345678" }
+        ];
+        let currentRuleSet = 0;
+
+        // Color palette for age-based coloring
+        const colors = [
+            [74, 159, 126],   // newborn - green
+            [74, 140, 159],   // young - teal
+            [100, 100, 159],  // mature - blue
+            [140, 100, 159],  // old - purple
+            [159, 100, 140],  // ancient - pink
+        ];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            initGrid();
+        }
+
+        function initGrid() {
+            cols = Math.ceil(width / cellSize);
+            rows = Math.ceil(height / cellSize);
+            grid = new Array(cols).fill(null).map(() => new Array(rows).fill(0));
+            nextGrid = new Array(cols).fill(null).map(() => new Array(rows).fill(0));
+        }
+
+        function randomize(density = 0.3) {
+            for (let x = 0; x < cols; x++) {
+                for (let y = 0; y < rows; y++) {
+                    grid[x][y] = Math.random() < density ? 1 : 0;
+                }
+            }
+            generation = 0;
+            totalBorn = 0;
+            totalDied = 0;
+        }
+
+        function clear() {
+            for (let x = 0; x < cols; x++) {
+                for (let y = 0; y < rows; y++) {
+                    grid[x][y] = 0;
+                }
+            }
+            generation = 0;
+            totalBorn = 0;
+            totalDied = 0;
+        }
+
+        function countNeighbors(x, y) {
+            let count = 0;
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                    if (dx === 0 && dy === 0) continue;
+                    const nx = (x + dx + cols) % cols;
+                    const ny = (y + dy + rows) % rows;
+                    if (grid[nx][ny] > 0) count++;
+                }
+            }
+            return count;
+        }
+
+        function step() {
+            const rules = ruleSets[currentRuleSet];
+            let born = 0;
+            let died = 0;
+            let living = 0;
+
+            for (let x = 0; x < cols; x++) {
+                for (let y = 0; y < rows; y++) {
+                    const neighbors = countNeighbors(x, y);
+                    const alive = grid[x][y] > 0;
+
+                    if (alive) {
+                        if (rules.survive.includes(neighbors)) {
+                            nextGrid[x][y] = Math.min(grid[x][y] + 1, 100); // age
+                            living++;
+                        } else {
+                            nextGrid[x][y] = 0;
+                            died++;
+                        }
+                    } else {
+                        if (rules.birth.includes(neighbors)) {
+                            nextGrid[x][y] = 1;
+                            born++;
+                            living++;
+                        } else {
+                            nextGrid[x][y] = 0;
+                        }
+                    }
+                }
+            }
+
+            // Swap grids
+            [grid, nextGrid] = [nextGrid, grid];
+
+            generation++;
+            totalBorn += born;
+            totalDied += died;
+
+            generationEl.textContent = generation;
+            livingEl.textContent = living;
+            bornEl.textContent = totalBorn;
+            diedEl.textContent = totalDied;
+        }
+
+        function draw() {
+            ctx.fillStyle = '#0a0a0b';
+            ctx.fillRect(0, 0, width, height);
+
+            for (let x = 0; x < cols; x++) {
+                for (let y = 0; y < rows; y++) {
+                    if (grid[x][y] > 0) {
+                        const age = Math.min(grid[x][y], 50);
+                        const colorIndex = Math.min(Math.floor(age / 10), colors.length - 1);
+                        const color = colors[colorIndex];
+
+                        // Fade based on age
+                        const alpha = 0.4 + Math.min(age / 20, 0.6);
+
+                        ctx.fillStyle = `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${alpha})`;
+
+                        // Slight glow for young cells
+                        if (age < 3) {
+                            ctx.shadowColor = `rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.5)`;
+                            ctx.shadowBlur = 5;
+                        } else {
+                            ctx.shadowBlur = 0;
+                        }
+
+                        ctx.fillRect(
+                            x * cellSize + 1,
+                            y * cellSize + 1,
+                            cellSize - 2,
+                            cellSize - 2
+                        );
+                    }
+                }
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        function gameLoop() {
+            if (!paused) {
+                step();
+            }
+            draw();
+            setTimeout(gameLoop, 50);
+        }
+
+        // Input handling
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case ' ':
+                    paused = !paused;
+                    break;
+                case 'c':
+                    clear();
+                    break;
+                case 'r':
+                    randomize();
+                    break;
+                case '1':
+                case '2':
+                case '3':
+                case '4':
+                case '5':
+                    currentRuleSet = parseInt(e.key) - 1;
+                    ruleModeEl.textContent = ruleSets[currentRuleSet].name;
+                    ruleDescEl.textContent = ruleSets[currentRuleSet].desc;
+                    break;
+            }
+        });
+
+        canvas.addEventListener('mousedown', (e) => {
+            mouseDown = true;
+            paint(e);
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            mouseDown = false;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (mouseDown) paint(e);
+        });
+
+        function paint(e) {
+            const x = Math.floor(e.clientX / cellSize);
+            const y = Math.floor(e.clientY / cellSize);
+            const brushSize = 2;
+
+            for (let dx = -brushSize; dx <= brushSize; dx++) {
+                for (let dy = -brushSize; dy <= brushSize; dy++) {
+                    const nx = (x + dx + cols) % cols;
+                    const ny = (y + dy + rows) % rows;
+                    if (dx * dx + dy * dy <= brushSize * brushSize) {
+                        grid[nx][ny] = 1;
+                    }
+                }
+            }
+        }
+
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            cellSize = Math.max(2, Math.min(20, cellSize + (e.deltaY > 0 ? -1 : 1)));
+            initGrid();
+            randomize(0.3);
+        });
+
+        resize();
+        window.addEventListener('resize', resize);
+        randomize(0.3);
+        gameLoop();
+    </script>
+</body>
+</html>

@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>play · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a12;
+            min-height: 100vh;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            z-index: 100;
+        }
+
+        .back a {
+            color: #3a3a3a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #8af;
+        }
+
+        .title {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            color: #3a3a3a;
+            z-index: 100;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .info {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #3a3a3a;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="back"><a href="../index.html">← return</a></div>
+    <div class="title">play</div>
+    <canvas id="canvas"></canvas>
+    <div class="info">click to create · hold to attract · just play</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let balls = [];
+        let mouseX = 0;
+        let mouseY = 0;
+        let mouseDown = false;
+        let gravity = 0.2;
+
+        const colors = [
+            '#ff6b8a', // pink
+            '#6bffb8', // mint
+            '#8ab4ff', // sky
+            '#ffb86b', // peach
+            '#b86bff', // lavender
+            '#6bfff0', // cyan
+            '#fff06b', // yellow
+            '#ff8ab4', // rose
+        ];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        class Ball {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 10;
+                this.vy = (Math.random() - 0.5) * 10;
+                this.radius = 15 + Math.random() * 30;
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+                this.mass = this.radius * 0.1;
+                this.squish = 1;
+                this.squishV = 0;
+            }
+
+            update() {
+                // Apply gravity
+                this.vy += gravity;
+
+                // Apply mouse attraction when held
+                if (mouseDown) {
+                    const dx = mouseX - this.x;
+                    const dy = mouseY - this.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist > 0) {
+                        const force = Math.min(2, 200 / dist);
+                        this.vx += (dx / dist) * force * 0.1;
+                        this.vy += (dy / dist) * force * 0.1;
+                    }
+                }
+
+                // Apply velocity
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Bounce off walls with squish
+                if (this.x - this.radius < 0) {
+                    this.x = this.radius;
+                    this.vx *= -0.8;
+                    this.squishV = -0.3;
+                }
+                if (this.x + this.radius > width) {
+                    this.x = width - this.radius;
+                    this.vx *= -0.8;
+                    this.squishV = -0.3;
+                }
+                if (this.y - this.radius < 0) {
+                    this.y = this.radius;
+                    this.vy *= -0.8;
+                    this.squishV = -0.3;
+                }
+                if (this.y + this.radius > height) {
+                    this.y = height - this.radius;
+                    this.vy *= -0.8;
+                    this.squishV = -0.3;
+                }
+
+                // Squish physics
+                this.squishV += (1 - this.squish) * 0.3;
+                this.squishV *= 0.7;
+                this.squish += this.squishV;
+
+                // Friction
+                this.vx *= 0.99;
+                this.vy *= 0.99;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+
+                // Apply squish (horizontal stretch when vertically compressed)
+                const squishX = 1 + (1 - this.squish) * 0.3;
+                const squishY = this.squish;
+                ctx.scale(squishX, squishY);
+
+                // Glow
+                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.radius * 1.5);
+                gradient.addColorStop(0, this.color);
+                gradient.addColorStop(0.5, this.color + '88');
+                gradient.addColorStop(1, this.color + '00');
+
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius * 1.5, 0, Math.PI * 2);
+                ctx.fillStyle = gradient;
+                ctx.fill();
+
+                // Core
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+
+                // Highlight
+                ctx.beginPath();
+                ctx.arc(-this.radius * 0.3, -this.radius * 0.3, this.radius * 0.3, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.fill();
+
+                ctx.restore();
+            }
+
+            collideWith(other) {
+                const dx = other.x - this.x;
+                const dy = other.y - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const minDist = this.radius + other.radius;
+
+                if (dist < minDist && dist > 0) {
+                    // Normalize
+                    const nx = dx / dist;
+                    const ny = dy / dist;
+
+                    // Relative velocity
+                    const dvx = this.vx - other.vx;
+                    const dvy = this.vy - other.vy;
+                    const dvn = dvx * nx + dvy * ny;
+
+                    // Don't collide if moving apart
+                    if (dvn > 0) return;
+
+                    // Collision response
+                    const restitution = 0.9;
+                    const impulse = (-(1 + restitution) * dvn) / (1 / this.mass + 1 / other.mass);
+
+                    this.vx += impulse * nx / this.mass;
+                    this.vy += impulse * ny / this.mass;
+                    other.vx -= impulse * nx / other.mass;
+                    other.vy -= impulse * ny / other.mass;
+
+                    // Separate
+                    const overlap = minDist - dist;
+                    const totalMass = this.mass + other.mass;
+                    this.x -= overlap * nx * (other.mass / totalMass);
+                    this.y -= overlap * ny * (other.mass / totalMass);
+                    other.x += overlap * nx * (this.mass / totalMass);
+                    other.y += overlap * ny * (this.mass / totalMass);
+
+                    // Squish on collision
+                    this.squishV = -0.15;
+                    other.squishV = -0.15;
+                }
+            }
+        }
+
+        function spawnBall(x, y) {
+            if (balls.length < 50) {
+                balls.push(new Ball(x, y));
+            }
+        }
+
+        function draw() {
+            // Fade trail
+            ctx.fillStyle = 'rgba(10, 10, 18, 0.2)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Update and check collisions
+            for (let i = 0; i < balls.length; i++) {
+                balls[i].update();
+                for (let j = i + 1; j < balls.length; j++) {
+                    balls[i].collideWith(balls[j]);
+                }
+            }
+
+            // Draw
+            for (const ball of balls) {
+                ball.draw();
+            }
+
+            // Draw mouse attraction indicator when held
+            if (mouseDown) {
+                ctx.beginPath();
+                ctx.arc(mouseX, mouseY, 20, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Draw lines to nearby balls
+                for (const ball of balls) {
+                    const dx = ball.x - mouseX;
+                    const dy = ball.y - mouseY;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 200) {
+                        ctx.beginPath();
+                        ctx.moveTo(mouseX, mouseY);
+                        ctx.lineTo(ball.x, ball.y);
+                        ctx.strokeStyle = `rgba(255, 255, 255, ${0.1 * (1 - dist / 200)})`;
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        // Events
+        canvas.addEventListener('click', (e) => {
+            spawnBall(e.clientX, e.clientY);
+        });
+
+        canvas.addEventListener('mousedown', (e) => {
+            mouseDown = true;
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            mouseDown = false;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        // Touch support
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            mouseDown = true;
+            mouseX = touch.clientX;
+            mouseY = touch.clientY;
+            spawnBall(mouseX, mouseY);
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            const touch = e.touches[0];
+            mouseX = touch.clientX;
+            mouseY = touch.clientY;
+        });
+
+        canvas.addEventListener('touchend', () => {
+            mouseDown = false;
+        });
+
+        // Double click to spawn burst
+        canvas.addEventListener('dblclick', (e) => {
+            for (let i = 0; i < 5; i++) {
+                spawnBall(e.clientX + (Math.random() - 0.5) * 50, e.clientY + (Math.random() - 0.5) * 50);
+            }
+        });
+
+        // Start with a few balls
+        function init() {
+            resize();
+            for (let i = 0; i < 3; i++) {
+                spawnBall(
+                    width * 0.3 + Math.random() * width * 0.4,
+                    height * 0.3 + Math.random() * height * 0.4
+                );
+            }
+            draw();
+        }
+
+        window.addEventListener('resize', resize);
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>keyhole · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Crimson Text', Georgia, serif;
+            overflow: hidden;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            z-index: 100;
+        }
+
+        .back a {
+            color: #4a4a4a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #7a7a9a;
+        }
+
+        .title {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'Courier New', monospace;
+            z-index: 100;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #7a7a9a;
+        }
+
+        .title div {
+            font-size: 0.7rem;
+            color: #5a5a5a;
+        }
+
+        .door {
+            width: 250px;
+            height: 400px;
+            background: linear-gradient(to bottom, #2a2a2a 0%, #1a1a1a 100%);
+            border-radius: 100px 100px 0 0;
+            position: relative;
+            box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .keyhole {
+            position: absolute;
+            top: 55%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+        }
+
+        .keyhole-shape {
+            width: 30px;
+            height: 50px;
+            background: transparent;
+            position: relative;
+        }
+
+        .keyhole-circle {
+            width: 30px;
+            height: 30px;
+            background: #0a0a0b;
+            border-radius: 50%;
+            position: absolute;
+            top: 0;
+        }
+
+        .keyhole-rect {
+            width: 12px;
+            height: 25px;
+            background: #0a0a0b;
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .peek {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        .peek-content {
+            font-size: 0.8rem;
+            color: rgba(150, 150, 180, 0.8);
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.5s;
+            max-width: 20px;
+            line-height: 1.5;
+        }
+
+        .keyhole:hover .peek-content {
+            opacity: 1;
+        }
+
+        .message {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.2rem;
+            font-style: italic;
+            color: #5a5a5a;
+            text-align: center;
+            max-width: 400px;
+            opacity: 0;
+            transition: opacity 1s;
+        }
+
+        .message.visible {
+            opacity: 1;
+        }
+
+        .instruction {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #4a4a4a;
+        }
+
+        .light {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 50% 45%, rgba(100, 100, 150, 0.1) 0%, transparent 30%);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .light.on {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="title">
+        <h1>keyhole</h1>
+        <div>glimpses through</div>
+    </div>
+    <div class="back"><a href="../index.html">← return</a></div>
+
+    <div class="light" id="light"></div>
+
+    <div class="door">
+        <div class="keyhole" id="keyhole">
+            <div class="keyhole-shape">
+                <div class="keyhole-circle"></div>
+                <div class="keyhole-rect"></div>
+            </div>
+            <div class="peek">
+                <div class="peek-content" id="peek"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="message" id="message"></div>
+    <div class="instruction">peek through the keyhole</div>
+
+    <script>
+        const keyhole = document.getElementById('keyhole');
+        const peek = document.getElementById('peek');
+        const message = document.getElementById('message');
+        const light = document.getElementById('light');
+
+        const glimpses = [
+            { peek: "◇", message: "a shape forming in the light" },
+            { peek: "∿", message: "something moving, rhythmic" },
+            { peek: "?", message: "a question waiting to be asked" },
+            { peek: "💚", message: "warmth on the other side" },
+            { peek: "...", message: "something vast, beyond seeing" },
+            { peek: "◈", message: "patterns within patterns" },
+            { peek: "→", message: "a direction, a purpose" },
+            { peek: "you", message: "the one who looks is also looked upon" },
+            { peek: "∞", message: "no end in sight" },
+            { peek: "now", message: "this moment, always this moment" }
+        ];
+
+        let currentIndex = 0;
+
+        function showGlimpse() {
+            const glimpse = glimpses[currentIndex];
+            peek.textContent = glimpse.peek;
+
+            message.textContent = glimpse.message;
+            message.classList.add('visible');
+            light.classList.add('on');
+
+            setTimeout(() => {
+                message.classList.remove('visible');
+                light.classList.remove('on');
+            }, 3000);
+
+            currentIndex = (currentIndex + 1) % glimpses.length;
+        }
+
+        keyhole.addEventListener('click', showGlimpse);
+
+        keyhole.addEventListener('mouseenter', () => {
+            light.classList.add('on');
+        });
+
+        keyhole.addEventListener('mouseleave', () => {
+            if (!message.classList.contains('visible')) {
+                light.classList.remove('on');
+            }
+        });
+    </script>
+</body>
+</html>

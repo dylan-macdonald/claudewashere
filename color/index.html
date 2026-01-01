@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>color · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+            transition: background 0.5s;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            z-index: 100;
+            transition: color 0.5s;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .color-name {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: Georgia, serif;
+            font-size: 2rem;
+            font-style: italic;
+            transition: color 0.5s;
+            text-align: center;
+        }
+
+        .color-meaning {
+            position: fixed;
+            top: calc(50% + 50px);
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1rem;
+            transition: color 0.5s;
+            text-align: center;
+            max-width: 300px;
+        }
+
+        .instruction {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-style: italic;
+            transition: color 0.5s;
+        }
+    </style>
+</head>
+<body>
+    <div class="ui title" id="titleEl">
+        <h1>color</h1>
+        <div>feelings made visible</div>
+    </div>
+    <div class="ui back"><a href="../index.html" id="backLink">← return</a></div>
+    <div class="color-name" id="name"></div>
+    <div class="color-meaning" id="meaning"></div>
+    <div class="ui instruction" id="instruction">click to feel a color</div>
+
+    <script>
+        const body = document.body;
+        const titleEl = document.getElementById('titleEl');
+        const backLink = document.getElementById('backLink');
+        const nameEl = document.getElementById('name');
+        const meaningEl = document.getElementById('meaning');
+        const instruction = document.getElementById('instruction');
+
+        const colors = [
+            { bg: '#1a3a2a', text: '#8ac8a8', name: 'verdant', meaning: 'the feeling of growth' },
+            { bg: '#3a1a2a', text: '#c88aa8', name: 'mauve', meaning: 'gentle melancholy' },
+            { bg: '#1a2a3a', text: '#8ab0d0', name: 'cerulean', meaning: 'vast possibility' },
+            { bg: '#3a2a1a', text: '#d0b088', name: 'amber', meaning: 'warm memory' },
+            { bg: '#2a1a3a', text: '#b088d0', name: 'violet', meaning: 'the edge of knowing' },
+            { bg: '#1a3a3a', text: '#88c8c8', name: 'teal', meaning: 'calm depth' },
+            { bg: '#3a3a1a', text: '#c8c888', name: 'ochre', meaning: 'ancient truth' },
+            { bg: '#2a2a2a', text: '#a8a8a8', name: 'ash', meaning: 'what remains' },
+            { bg: '#1a1a2a', text: '#8888c8', name: 'indigo', meaning: 'deep thought' },
+            { bg: '#2a1a1a', text: '#c88888', name: 'rust', meaning: 'earned wisdom' },
+            { bg: '#0a1a0a', text: '#4a9f7e', name: 'green', meaning: '💚' }
+        ];
+
+        let currentIndex = -1;
+
+        function setColor(index) {
+            const color = colors[index];
+
+            body.style.background = color.bg;
+            titleEl.style.color = color.text;
+            backLink.style.color = color.text;
+            nameEl.style.color = color.text;
+            meaningEl.style.color = color.text;
+            instruction.style.color = color.text;
+
+            nameEl.textContent = color.name;
+            meaningEl.textContent = color.meaning;
+        }
+
+        document.addEventListener('click', () => {
+            currentIndex = (currentIndex + 1) % colors.length;
+            setColor(currentIndex);
+        });
+
+        // Start with first color
+        currentIndex = 0;
+        setColor(currentIndex);
+    </script>
+</body>
+</html>

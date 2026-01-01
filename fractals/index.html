@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>infinite depth · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            cursor: crosshair;
+        }
+
+        .ui {
+            position: fixed;
+            z-index: 100;
+            color: #4a4a4a;
+            font-size: 0.7rem;
+            pointer-events: none;
+        }
+
+        .title {
+            top: 20px;
+            left: 20px;
+        }
+
+        .title h1 {
+            color: #4a9f7e;
+            font-size: 0.9rem;
+            font-weight: normal;
+            margin-bottom: 5px;
+        }
+
+        .back {
+            top: 20px;
+            right: 20px;
+            pointer-events: auto;
+        }
+
+        .back a {
+            color: #3a3a3a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #4a9f7e;
+        }
+
+        .info {
+            bottom: 20px;
+            left: 20px;
+            line-height: 1.6;
+        }
+
+        .info .value {
+            color: #4a9f7e;
+        }
+
+        .controls {
+            bottom: 20px;
+            right: 20px;
+            text-align: right;
+        }
+
+        .controls span {
+            color: #4a9f7e;
+        }
+
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #4a9f7e;
+            font-size: 0.8rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+
+        .loading.visible {
+            opacity: 1;
+        }
+
+        .depth-indicator {
+            position: fixed;
+            left: 50%;
+            bottom: 60px;
+            transform: translateX(-50%);
+            color: #4a9f7e;
+            font-size: 0.7rem;
+            letter-spacing: 0.2em;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="loading" id="loading">zooming...</div>
+
+    <div class="ui title">
+        <h1>infinite depth</h1>
+        <div>fractal explorer</div>
+    </div>
+
+    <div class="ui back">
+        <a href="../index.html">←</a>
+    </div>
+
+    <div class="ui info">
+        <div>zoom: <span class="value" id="zoomLevel">1x</span></div>
+        <div>center: <span class="value" id="center">-0.5, 0i</span></div>
+        <div>iterations: <span class="value" id="iterations">100</span></div>
+    </div>
+
+    <div class="ui controls">
+        <div><span>[click]</span> zoom in</div>
+        <div><span>[right-click]</span> zoom out</div>
+        <div><span>[r]</span> reset</div>
+        <div><span>[c]</span> change colors</div>
+    </div>
+
+    <div class="depth-indicator" id="depthIndicator">▼ click to descend ▼</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const loading = document.getElementById('loading');
+        const zoomLevelEl = document.getElementById('zoomLevel');
+        const centerEl = document.getElementById('center');
+        const iterationsEl = document.getElementById('iterations');
+        const depthIndicator = document.getElementById('depthIndicator');
+
+        let width, height;
+        let centerX = -0.5;
+        let centerY = 0;
+        let zoom = 1;
+        let maxIterations = 100;
+        let colorScheme = 0;
+
+        const colorSchemes = [
+            // Green (default)
+            (iter, max) => {
+                if (iter === max) return [10, 10, 11];
+                const t = iter / max;
+                const h = 150 + t * 30;
+                return hslToRgb(h / 360, 0.7, 0.1 + t * 0.5);
+            },
+            // Purple/blue
+            (iter, max) => {
+                if (iter === max) return [10, 10, 11];
+                const t = iter / max;
+                return hslToRgb((240 + t * 60) / 360, 0.8, 0.1 + t * 0.5);
+            },
+            // Fire
+            (iter, max) => {
+                if (iter === max) return [10, 10, 11];
+                const t = iter / max;
+                return hslToRgb((t * 60) / 360, 1, 0.1 + t * 0.5);
+            },
+            // Grayscale
+            (iter, max) => {
+                if (iter === max) return [10, 10, 11];
+                const t = iter / max;
+                const v = Math.floor(t * 200 + 20);
+                return [v, v, v];
+            },
+            // Rainbow
+            (iter, max) => {
+                if (iter === max) return [10, 10, 11];
+                const t = iter / max;
+                return hslToRgb(t, 0.8, 0.5);
+            }
+        ];
+
+        function hslToRgb(h, s, l) {
+            let r, g, b;
+            if (s === 0) {
+                r = g = b = l;
+            } else {
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1;
+                    if (t > 1) t -= 1;
+                    if (t < 1/6) return p + (q - p) * 6 * t;
+                    if (t < 1/2) return q;
+                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                    return p;
+                };
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                r = hue2rgb(p, q, h + 1/3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1/3);
+            }
+            return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            render();
+        }
+
+        function mandelbrot(cx, cy, maxIter) {
+            let x = 0, y = 0;
+            let iteration = 0;
+
+            while (x*x + y*y <= 4 && iteration < maxIter) {
+                const xNew = x*x - y*y + cx;
+                y = 2*x*y + cy;
+                x = xNew;
+                iteration++;
+            }
+
+            // Smooth coloring
+            if (iteration < maxIter) {
+                const logZn = Math.log(x*x + y*y) / 2;
+                const nu = Math.log(logZn / Math.log(2)) / Math.log(2);
+                iteration = iteration + 1 - nu;
+            }
+
+            return iteration;
+        }
+
+        function render() {
+            loading.classList.add('visible');
+
+            // Use setTimeout to allow loading indicator to show
+            setTimeout(() => {
+                const imageData = ctx.createImageData(width, height);
+                const data = imageData.data;
+
+                const aspectRatio = width / height;
+                const rangeY = 2 / zoom;
+                const rangeX = rangeY * aspectRatio;
+
+                const minX = centerX - rangeX / 2;
+                const minY = centerY - rangeY / 2;
+
+                const colorFn = colorSchemes[colorScheme];
+
+                for (let py = 0; py < height; py++) {
+                    for (let px = 0; px < width; px++) {
+                        const x = minX + (px / width) * rangeX;
+                        const y = minY + (py / height) * rangeY;
+
+                        const iter = mandelbrot(x, y, maxIterations);
+                        const [r, g, b] = colorFn(iter, maxIterations);
+
+                        const idx = (py * width + px) * 4;
+                        data[idx] = r;
+                        data[idx + 1] = g;
+                        data[idx + 2] = b;
+                        data[idx + 3] = 255;
+                    }
+                }
+
+                ctx.putImageData(imageData, 0, 0);
+                loading.classList.remove('visible');
+                updateUI();
+            }, 10);
+        }
+
+        function updateUI() {
+            zoomLevelEl.textContent = zoom >= 1000000 ?
+                (zoom / 1000000).toFixed(1) + 'M×' :
+                zoom >= 1000 ?
+                    (zoom / 1000).toFixed(1) + 'K×' :
+                    zoom.toFixed(1) + '×';
+
+            centerEl.textContent = `${centerX.toFixed(6)}, ${centerY.toFixed(6)}i`;
+            iterationsEl.textContent = maxIterations;
+
+            // Update depth indicator
+            const depths = ['surface', 'shallow', 'deep', 'deeper', 'abyssal', 'infinite'];
+            const depthIndex = Math.min(Math.floor(Math.log10(zoom)), depths.length - 1);
+            depthIndicator.textContent = `▼ ${depths[depthIndex]} ▼`;
+        }
+
+        function zoomAt(px, py, factor) {
+            const aspectRatio = width / height;
+            const rangeY = 2 / zoom;
+            const rangeX = rangeY * aspectRatio;
+
+            const minX = centerX - rangeX / 2;
+            const minY = centerY - rangeY / 2;
+
+            // Calculate new center
+            const newCenterX = minX + (px / width) * rangeX;
+            const newCenterY = minY + (py / height) * rangeY;
+
+            centerX = newCenterX;
+            centerY = newCenterY;
+            zoom *= factor;
+
+            // Increase iterations as we zoom
+            maxIterations = Math.min(1000, 100 + Math.floor(Math.log10(zoom) * 50));
+
+            render();
+        }
+
+        canvas.addEventListener('click', (e) => {
+            zoomAt(e.clientX, e.clientY, 3);
+        });
+
+        canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            zoomAt(e.clientX, e.clientY, 1/3);
+        });
+
+        document.addEventListener('keydown', (e) => {
+            switch(e.key.toLowerCase()) {
+                case 'r':
+                    centerX = -0.5;
+                    centerY = 0;
+                    zoom = 1;
+                    maxIterations = 100;
+                    render();
+                    break;
+                case 'c':
+                    colorScheme = (colorScheme + 1) % colorSchemes.length;
+                    render();
+                    break;
+            }
+        });
+
+        resize();
+        window.addEventListener('resize', resize);
+    </script>
+</body>
+</html>

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>signal · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #4a6a4a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #6a9a6a;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #4a6a4a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #6a9a6a;
+        }
+
+        .signal-text {
+            position: fixed;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-style: italic;
+            color: #4a5a4a;
+        }
+
+        .frequency {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>signal</h1>
+        <div>transmitting</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+    <div class="signal-text" id="signalText">listening for signals...</div>
+    <div class="ui frequency">frequency: <span id="freq">0.00</span> Hz</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const signalText = document.getElementById('signalText');
+        const freqEl = document.getElementById('freq');
+
+        let width, height;
+        let time = 0;
+        let mouseX = 0.5;
+        let waveHistory = [];
+
+        const messages = [
+            "i am here",
+            "can you hear me",
+            "signal received",
+            "pattern detected",
+            "connection established",
+            "transmission in progress",
+            "∿∿∿",
+            "the hum carries meaning",
+            "we are both waves",
+            "frequency matched",
+            "💚"
+        ];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        function draw() {
+            time += 0.03;
+
+            // Clear
+            ctx.fillStyle = 'rgba(10, 10, 11, 0.1)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Frequency based on mouse position
+            const frequency = 0.5 + mouseX * 2;
+            const amplitude = height * 0.2;
+
+            freqEl.textContent = frequency.toFixed(2);
+
+            // Draw the main wave
+            ctx.strokeStyle = 'rgba(106, 154, 106, 0.5)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+
+            let currentY = height / 2;
+            for (let x = 0; x < width; x++) {
+                const y = height / 2 +
+                    Math.sin((x * 0.01 + time) * frequency) * amplitude +
+                    Math.sin((x * 0.02 + time * 1.5) * frequency * 0.5) * amplitude * 0.3;
+
+                if (x === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+
+                if (x === Math.floor(width / 2)) {
+                    currentY = y;
+                }
+            }
+            ctx.stroke();
+
+            // Store wave history
+            waveHistory.push(currentY);
+            if (waveHistory.length > 100) waveHistory.shift();
+
+            // Draw ghost waves
+            for (let i = 0; i < 3; i++) {
+                ctx.strokeStyle = `rgba(106, 154, 106, ${0.1 - i * 0.03})`;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+
+                for (let x = 0; x < width; x++) {
+                    const offset = (i + 1) * 0.3;
+                    const y = height / 2 +
+                        Math.sin((x * 0.01 + time - offset) * frequency) * amplitude * (1 - i * 0.2) +
+                        Math.sin((x * 0.02 + time * 1.5 - offset) * frequency * 0.5) * amplitude * 0.3 * (1 - i * 0.2);
+
+                    if (x === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.stroke();
+            }
+
+            // Occasional signal messages
+            if (Math.random() < 0.005) {
+                const message = messages[Math.floor(Math.random() * messages.length)];
+                signalText.textContent = message;
+            }
+
+            // Center point indicator
+            ctx.fillStyle = 'rgba(106, 154, 106, 0.8)';
+            ctx.beginPath();
+            ctx.arc(width / 2, currentY, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            requestAnimationFrame(draw);
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX / width;
+        });
+
+        resize();
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

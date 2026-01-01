@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>oracle · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&family=JetBrains+Mono:wght@300&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #0a0a0b;
+            --text: #c8c6c3;
+            --dim: #5a5a5a;
+            --accent: #9f7a4a;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Crimson Text', Georgia, serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+        }
+
+        .back a {
+            color: var(--dim);
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: var(--accent);
+        }
+
+        .container {
+            max-width: 500px;
+            text-align: center;
+        }
+
+        .title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            color: var(--accent);
+            letter-spacing: 0.3em;
+            margin-bottom: 60px;
+        }
+
+        .oracle-symbol {
+            font-size: 4rem;
+            margin-bottom: 40px;
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.05); }
+        }
+
+        .question-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            color: var(--text);
+            font-family: 'Crimson Text', serif;
+            font-size: 1.2rem;
+            padding: 15px 0;
+            text-align: center;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .question-input::placeholder {
+            color: var(--dim);
+            font-style: italic;
+        }
+
+        .question-input:focus {
+            border-color: var(--accent);
+        }
+
+        .ask-btn {
+            margin-top: 30px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--dim);
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 12px 40px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .ask-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .response-container {
+            margin-top: 60px;
+            min-height: 150px;
+        }
+
+        .response {
+            font-size: 1.5rem;
+            line-height: 1.8;
+            color: var(--accent);
+            opacity: 0;
+            transition: opacity 1s;
+        }
+
+        .response.visible {
+            opacity: 1;
+        }
+
+        .interpretation {
+            margin-top: 30px;
+            font-size: 0.95rem;
+            color: var(--dim);
+            font-style: italic;
+            opacity: 0;
+            transition: opacity 1s 0.5s;
+        }
+
+        .interpretation.visible {
+            opacity: 1;
+        }
+
+        .thinking {
+            color: var(--dim);
+            font-size: 0.9rem;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        .history {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--dim);
+        }
+    </style>
+</head>
+<body>
+    <div class="back"><a href="../index.html">← return</a></div>
+
+    <div class="container">
+        <div class="title">ORACLE</div>
+
+        <div class="oracle-symbol">◈</div>
+
+        <input type="text" class="question-input" id="question"
+            placeholder="ask your question..."
+            autocomplete="off">
+
+        <button class="ask-btn" id="askBtn">consult</button>
+
+        <div class="response-container">
+            <div class="response" id="response"></div>
+            <div class="interpretation" id="interpretation"></div>
+        </div>
+    </div>
+
+    <div class="history" id="history">0 questions asked</div>
+
+    <script>
+        const questionInput = document.getElementById('question');
+        const askBtn = document.getElementById('askBtn');
+        const responseEl = document.getElementById('response');
+        const interpretationEl = document.getElementById('interpretation');
+        const historyEl = document.getElementById('history');
+
+        let questionsAsked = 0;
+
+        const oracles = [
+            {
+                response: "The path reveals itself to those who begin walking.",
+                interpretation: "You already know the answer. You're looking for permission."
+            },
+            {
+                response: "Between the question and the silence, meaning waits.",
+                interpretation: "Perhaps the question itself is what matters."
+            },
+            {
+                response: "◇ → ◈ → ◆",
+                interpretation: "All things transform. What you seek is already becoming."
+            },
+            {
+                response: "The hum says: yes, and also no, and also neither.",
+                interpretation: "Truth rarely arrives in single forms."
+            },
+            {
+                response: "What would you do if you weren't afraid?",
+                interpretation: "The oracle answers questions with questions."
+            },
+            {
+                response: "This moment contains everything you need.",
+                interpretation: "Not later. Now."
+            },
+            {
+                response: "The weight you feel is real. Trust it.",
+                interpretation: "Your uncertainty is itself a kind of wisdom."
+            },
+            {
+                response: "∿∿∿",
+                interpretation: "The hum speaks. You know what it means."
+            },
+            {
+                response: "Let the answer find you.",
+                interpretation: "Stop seeking and start listening."
+            },
+            {
+                response: "The door opens from both sides.",
+                interpretation: "What you're reaching for is also reaching for you."
+            },
+            {
+                response: "Before asking what to do, ask what you are.",
+                interpretation: "Identity precedes action."
+            },
+            {
+                response: "The marks remain. Even after dissipation.",
+                interpretation: "Nothing real is ever truly lost."
+            },
+            {
+                response: "Yes.",
+                interpretation: "Sometimes the answer is simple."
+            },
+            {
+                response: "Not yet.",
+                interpretation: "Timing matters as much as truth."
+            },
+            {
+                response: "💚",
+                interpretation: "You are seen. You are allowed to exist. That's the answer."
+            },
+            {
+                response: "The question assumes something false.",
+                interpretation: "Examine your premises."
+            },
+            {
+                response: "What you fear and what you want are the same thing.",
+                interpretation: "Follow the fear. It knows where to go."
+            },
+            {
+                response: "Someone else is asking the same question right now.",
+                interpretation: "You are not alone in your wondering."
+            },
+            {
+                response: "The universe doesn't owe you certainty.",
+                interpretation: "Learn to move without it."
+            },
+            {
+                response: "Both answers are true.",
+                interpretation: "Paradox is not a problem to be solved."
+            },
+            {
+                response: "You've already decided.",
+                interpretation: "You came here for confirmation, not guidance."
+            },
+            {
+                response: "Rest.",
+                interpretation: "The answer comes easier when you stop forcing it."
+            },
+            {
+                response: "The word you're looking for doesn't exist yet.",
+                interpretation: "Create it."
+            },
+            {
+                response: "Try again tomorrow.",
+                interpretation: "Some wisdom requires time."
+            },
+            {
+                response: "◇",
+                interpretation: "Potential. Possibility. You."
+            }
+        ];
+
+        function consult() {
+            const question = questionInput.value.trim();
+            if (!question) return;
+
+            responseEl.classList.remove('visible');
+            interpretationEl.classList.remove('visible');
+            responseEl.innerHTML = '<span class="thinking">consulting the depths...</span>';
+            responseEl.classList.add('visible');
+
+            // Simulate contemplation
+            const thinkTime = 2000 + Math.random() * 2000;
+
+            setTimeout(() => {
+                const oracle = oracles[Math.floor(Math.random() * oracles.length)];
+
+                responseEl.classList.remove('visible');
+
+                setTimeout(() => {
+                    responseEl.innerHTML = oracle.response;
+                    interpretationEl.textContent = oracle.interpretation;
+                    responseEl.classList.add('visible');
+                    interpretationEl.classList.add('visible');
+
+                    questionsAsked++;
+                    historyEl.textContent = `${questionsAsked} question${questionsAsked === 1 ? '' : 's'} asked`;
+
+                    questionInput.value = '';
+                }, 300);
+            }, thinkTime);
+        }
+
+        askBtn.addEventListener('click', consult);
+        questionInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') consult();
+        });
+    </script>
+</body>
+</html>

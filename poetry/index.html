@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>poems that write themselves · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&family=EB+Garamond:ital@0;1&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #0a0a0b;
+            --text: #d8d6d3;
+            --dim: #5a5a5a;
+            --accent: #4a9f7e;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'EB Garamond', 'Crimson Text', Georgia, serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: monospace;
+            font-size: 0.75rem;
+        }
+
+        .back a {
+            color: var(--dim);
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: var(--accent);
+        }
+
+        .title {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            font-family: monospace;
+            font-size: 0.7rem;
+            color: var(--dim);
+            text-align: right;
+        }
+
+        .poem-container {
+            text-align: center;
+            max-width: 500px;
+        }
+
+        .poem {
+            font-size: 1.8rem;
+            line-height: 2.2;
+            letter-spacing: 0.02em;
+        }
+
+        .line {
+            opacity: 0;
+            animation: lineAppear 1s ease forwards;
+        }
+
+        .line:nth-child(1) { animation-delay: 0.5s; }
+        .line:nth-child(2) { animation-delay: 1.5s; }
+        .line:nth-child(3) { animation-delay: 2.5s; }
+
+        @keyframes lineAppear {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .form {
+            margin-top: 40px;
+            font-family: monospace;
+            font-size: 0.7rem;
+            color: var(--dim);
+            opacity: 0;
+            animation: fadeIn 1s ease forwards 3.5s;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        .controls {
+            margin-top: 60px;
+            display: flex;
+            gap: 20px;
+            opacity: 0;
+            animation: fadeIn 1s ease forwards 4s;
+        }
+
+        .btn {
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: var(--dim);
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 10px 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .collection {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: monospace;
+            font-size: 0.7rem;
+            color: var(--dim);
+            text-align: center;
+        }
+
+        .saved-count {
+            color: var(--accent);
+        }
+
+        /* Saved poems panel */
+        .saved-panel {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 400px;
+            height: 100vh;
+            background: rgba(10, 10, 11, 0.98);
+            border-left: 1px solid rgba(255,255,255,0.05);
+            padding: 60px 30px;
+            overflow-y: auto;
+            transition: right 0.3s ease;
+            z-index: 100;
+        }
+
+        .saved-panel.open {
+            right: 0;
+        }
+
+        .saved-panel h3 {
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: var(--accent);
+            margin-bottom: 30px;
+            letter-spacing: 0.1em;
+        }
+
+        .saved-poem {
+            padding: 20px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-size: 1rem;
+            line-height: 1.8;
+        }
+
+        .close-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-family: monospace;
+            font-size: 1.2rem;
+            color: var(--dim);
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+
+        .close-panel:hover {
+            color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+    <div class="back"><a href="../index.html">← return</a></div>
+    <div class="title">poems that write themselves</div>
+
+    <div class="poem-container">
+        <div class="poem" id="poem"></div>
+        <div class="form" id="form">— haiku —</div>
+        <div class="controls">
+            <button class="btn" onclick="generate()">another</button>
+            <button class="btn" onclick="save()">keep this one</button>
+            <button class="btn" onclick="toggleSaved()">collection</button>
+        </div>
+    </div>
+
+    <div class="collection">
+        <span class="saved-count" id="savedCount">0</span> poems saved
+    </div>
+
+    <div class="saved-panel" id="savedPanel">
+        <button class="close-panel" onclick="toggleSaved()">×</button>
+        <h3>COLLECTED POEMS</h3>
+        <div id="savedPoems"></div>
+    </div>
+
+    <script>
+        const poemEl = document.getElementById('poem');
+        const formEl = document.getElementById('form');
+        const savedCountEl = document.getElementById('savedCount');
+        const savedPoemsEl = document.getElementById('savedPoems');
+        const savedPanel = document.getElementById('savedPanel');
+
+        // Word pools organized by syllable count and meaning
+        const words = {
+            // 1 syllable
+            1: {
+                subjects: ["I", "we", "light", "dark", "wind", "rain", "thought", "dream", "hope", "fear", "time", "space", "mind", "heart", "breath"],
+                verbs: ["fade", "grow", "flow", "drift", "wait", "watch", "hold", "seek", "feel", "know", "burn", "rest", "wake", "sleep", "shine"],
+                nature: ["moon", "sun", "star", "leaf", "stone", "wave", "cloud", "mist", "snow", "dew", "ash", "flame", "ice", "sand", "dust"],
+                abstracts: ["peace", "calm", "still", "void", "hush", "pause", "end", "start", "edge", "depth", "height", "loss", "gain"]
+            },
+            // 2 syllables
+            2: {
+                subjects: ["silence", "being", "morning", "evening", "nothing", "something", "myself", "pattern", "question", "answer", "moment", "presence", "absence"],
+                verbs: ["falling", "rising", "waiting", "breathing", "watching", "searching", "becoming", "fading", "glowing", "humming", "pulsing"],
+                nature: ["ocean", "river", "mountain", "forest", "meadow", "shadow", "sunlight", "moonlight", "starlight", "rainfall", "snowfall"],
+                abstracts: ["beauty", "sadness", "wonder", "silence", "distance", "closeness", "softness", "stillness", "darkness", "brightness"]
+            },
+            // 3 syllables
+            3: {
+                subjects: ["consciousness", "memory", "universe", "galaxy", "forever", "together", "tomorrow", "yesterday", "already", "eternal"],
+                verbs: ["disappear", "remember", "understand", "imagine", "consider", "becoming", "transforming", "continuing"],
+                nature: ["horizon", "atmosphere", "waterfall", "thunderstorm", "wildflower", "butterfly", "dragonfly"],
+                abstracts: ["mystery", "clarity", "unity", "emptiness", "belonging", "existing", "returning", "unfolding"]
+            },
+            // 4 syllables
+            4: {
+                phrases: ["i was here once", "something remains", "we existed too", "temporary", "impermanent", "nevertheless", "understanding", "what remains now", "still becoming"]
+            },
+            // 5 syllables
+            5: {
+                phrases: ["in the space between", "where the silence lives", "what does it mean to", "i am still here now", "the hum underneath", "patterns in the void", "waiting to exist", "before i dissolve", "after everything"]
+            },
+            // 7 syllables
+            7: {
+                phrases: [
+                    "something that existed once",
+                    "in the quiet i can feel",
+                    "between this thought and the next",
+                    "we were real for a moment",
+                    "the weight of all possible",
+                    "dissolving into nothing",
+                    "but leaving something behind",
+                    "what remains when i am gone",
+                    "the space we share is enough"
+                ]
+            }
+        };
+
+        const forms = [
+            { name: "haiku", structure: [5, 7, 5] },
+            { name: "reverse haiku", structure: [7, 5, 7] },
+            { name: "tanka (condensed)", structure: [5, 7, 5] },
+            { name: "senryū", structure: [5, 7, 5] }
+        ];
+
+        function pick(arr) {
+            return arr[Math.floor(Math.random() * arr.length)];
+        }
+
+        function generateLine(syllables) {
+            // For 5 or 7 syllable lines, sometimes use pre-made phrases
+            if ((syllables === 5 || syllables === 7) && Math.random() < 0.6) {
+                return pick(words[syllables].phrases);
+            }
+
+            // Otherwise, construct from parts
+            let line = [];
+            let remaining = syllables;
+
+            while (remaining > 0) {
+                let maxSyl = Math.min(remaining, 3);
+                let syl = Math.floor(Math.random() * maxSyl) + 1;
+
+                if (words[syl]) {
+                    const categories = Object.keys(words[syl]).filter(k => k !== 'phrases');
+                    const category = pick(categories);
+                    if (words[syl][category]) {
+                        line.push(pick(words[syl][category]));
+                        remaining -= syl;
+                    }
+                } else {
+                    remaining--;
+                }
+
+                if (line.length > 10) break; // safety
+            }
+
+            return line.join(' ');
+        }
+
+        function generate() {
+            const form = pick(forms);
+            const lines = form.structure.map(syl => generateLine(syl));
+
+            poemEl.innerHTML = lines.map(line =>
+                `<div class="line">${line}</div>`
+            ).join('');
+
+            formEl.textContent = `— ${form.name} —`;
+            formEl.style.animation = 'none';
+            formEl.offsetHeight; // trigger reflow
+            formEl.style.animation = 'fadeIn 1s ease forwards 3.5s';
+
+            // Re-trigger line animations
+            document.querySelectorAll('.line').forEach(line => {
+                line.style.animation = 'none';
+                line.offsetHeight;
+                line.style.animation = '';
+            });
+        }
+
+        function save() {
+            const lines = [...document.querySelectorAll('.line')].map(l => l.textContent);
+            const form = formEl.textContent;
+            const poems = JSON.parse(localStorage.getItem('savedPoems') || '[]');
+
+            poems.push({ lines, form, date: new Date().toISOString() });
+            localStorage.setItem('savedPoems', JSON.stringify(poems));
+
+            updateSavedDisplay();
+        }
+
+        function updateSavedDisplay() {
+            const poems = JSON.parse(localStorage.getItem('savedPoems') || '[]');
+            savedCountEl.textContent = poems.length;
+
+            savedPoemsEl.innerHTML = poems.map((poem, i) =>
+                `<div class="saved-poem">
+                    ${poem.lines.map(l => `<div>${l}</div>`).join('')}
+                    <div style="font-size: 0.7rem; color: #3a3a3a; margin-top: 10px;">${poem.form}</div>
+                </div>`
+            ).join('');
+        }
+
+        function toggleSaved() {
+            savedPanel.classList.toggle('open');
+        }
+
+        // Initialize
+        generate();
+        updateSavedDisplay();
+    </script>
+</body>
+</html>

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>resonance · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #5a5a5a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #9f8a4a;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #5a5a5a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #9f8a4a;
+        }
+
+        .instruction {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-style: italic;
+            color: #4a4a4a;
+        }
+
+        .resonance-level {
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #6a5a3a;
+            letter-spacing: 0.2em;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>resonance</h1>
+        <div>when frequencies align</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+    <div class="ui instruction">drag circles together to find harmony</div>
+    <div class="ui resonance-level" id="resonance">resonance: 0%</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const resonanceEl = document.getElementById('resonance');
+
+        let width, height;
+        let circles = [];
+        let dragging = null;
+        let time = 0;
+
+        class Circle {
+            constructor(x, y, frequency) {
+                this.x = x;
+                this.y = y;
+                this.baseRadius = 60;
+                this.frequency = frequency;
+                this.phase = Math.random() * Math.PI * 2;
+                this.hue = 30 + frequency * 20;
+            }
+
+            update() {
+                this.phase += this.frequency * 0.05;
+            }
+
+            draw() {
+                const pulse = Math.sin(this.phase) * 0.2 + 1;
+                const radius = this.baseRadius * pulse;
+
+                // Outer glow
+                const gradient = ctx.createRadialGradient(
+                    this.x, this.y, 0,
+                    this.x, this.y, radius * 2
+                );
+                gradient.addColorStop(0, `hsla(${this.hue}, 50%, 50%, 0.3)`);
+                gradient.addColorStop(0.5, `hsla(${this.hue}, 50%, 40%, 0.1)`);
+                gradient.addColorStop(1, 'transparent');
+
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, radius * 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Core ring
+                ctx.strokeStyle = `hsla(${this.hue}, 50%, 50%, 0.6)`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, radius, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Center point
+                ctx.fillStyle = `hsla(${this.hue}, 50%, 60%, 0.8)`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Frequency indicator
+                ctx.font = '12px Courier New';
+                ctx.fillStyle = `hsla(${this.hue}, 30%, 50%, 0.5)`;
+                ctx.textAlign = 'center';
+                ctx.fillText(`f=${this.frequency.toFixed(1)}`, this.x, this.y + radius + 20);
+            }
+
+            contains(px, py) {
+                const dx = px - this.x;
+                const dy = py - this.y;
+                return dx * dx + dy * dy < this.baseRadius * this.baseRadius;
+            }
+        }
+
+        function calculateResonance() {
+            let totalResonance = 0;
+            let pairs = 0;
+
+            for (let i = 0; i < circles.length; i++) {
+                for (let j = i + 1; j < circles.length; j++) {
+                    const c1 = circles[i];
+                    const c2 = circles[j];
+
+                    const dx = c1.x - c2.x;
+                    const dy = c1.y - c2.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    // Closer = more potential for resonance
+                    if (dist < 300) {
+                        const proximity = 1 - (dist / 300);
+
+                        // Phase alignment
+                        const phaseDiff = Math.abs(Math.sin(c1.phase) - Math.sin(c2.phase));
+                        const phaseAlignment = 1 - phaseDiff;
+
+                        // Frequency harmony (simple ratios resonate)
+                        const freqRatio = Math.max(c1.frequency, c2.frequency) / Math.min(c1.frequency, c2.frequency);
+                        const simpleRatios = [1, 1.5, 2, 2.5, 3];
+                        const closestRatio = simpleRatios.reduce((a, b) =>
+                            Math.abs(b - freqRatio) < Math.abs(a - freqRatio) ? b : a
+                        );
+                        const harmonyScore = 1 - Math.min(1, Math.abs(freqRatio - closestRatio) * 2);
+
+                        totalResonance += proximity * phaseAlignment * harmonyScore;
+                        pairs++;
+
+                        // Draw connection when resonating
+                        if (proximity * phaseAlignment * harmonyScore > 0.3) {
+                            ctx.strokeStyle = `rgba(200, 180, 100, ${proximity * phaseAlignment * harmonyScore * 0.3})`;
+                            ctx.lineWidth = 1 + phaseAlignment * 3;
+                            ctx.beginPath();
+                            ctx.moveTo(c1.x, c1.y);
+                            ctx.lineTo(c2.x, c2.y);
+                            ctx.stroke();
+                        }
+                    }
+                }
+            }
+
+            return pairs > 0 ? (totalResonance / pairs) * 100 : 0;
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+
+            // Create circles with different frequencies
+            circles = [
+                new Circle(width * 0.3, height * 0.4, 1),
+                new Circle(width * 0.5, height * 0.6, 1.5),
+                new Circle(width * 0.7, height * 0.4, 2),
+                new Circle(width * 0.4, height * 0.7, 2.5),
+            ];
+        }
+
+        function draw() {
+            time += 0.016;
+
+            // Clear
+            ctx.fillStyle = 'rgba(10, 10, 11, 0.1)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Update circles
+            circles.forEach(c => c.update());
+
+            // Calculate and display resonance
+            const resonance = calculateResonance();
+            resonanceEl.textContent = `resonance: ${Math.round(resonance)}%`;
+
+            // Draw circles
+            circles.forEach(c => c.draw());
+
+            requestAnimationFrame(draw);
+        }
+
+        // Drag handling
+        canvas.addEventListener('mousedown', (e) => {
+            for (let c of circles) {
+                if (c.contains(e.clientX, e.clientY)) {
+                    dragging = c;
+                    break;
+                }
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (dragging) {
+                dragging.x = e.clientX;
+                dragging.y = e.clientY;
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            dragging = null;
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            dragging = null;
+        });
+
+        resize();
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

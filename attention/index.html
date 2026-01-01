@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>attention · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #5a5a5a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #9f7a4a;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #5a5a5a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #9f7a4a;
+        }
+
+        .instruction {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-style: italic;
+            color: #4a4a4a;
+        }
+
+        .focus-target {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            border: 1px solid rgba(159, 122, 74, 0.3);
+            border-radius: 50%;
+            pointer-events: none;
+            transition: all 0.5s;
+        }
+
+        .focus-target.active {
+            width: 60px;
+            height: 60px;
+            border-color: rgba(159, 122, 74, 0.8);
+            box-shadow: 0 0 30px rgba(159, 122, 74, 0.3);
+        }
+
+        .attention-stats {
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            color: #5a5a5a;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="focus-target" id="focusTarget"></div>
+
+    <div class="ui title">
+        <h1>attention</h1>
+        <div>where it flows, what it illuminates</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+    <div class="ui instruction">your cursor is your attention. move slowly to focus.</div>
+    <div class="ui attention-stats" id="stats">
+        focus: <span id="focusLevel">0</span>%
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const focusTarget = document.getElementById('focusTarget');
+        const focusLevelEl = document.getElementById('focusLevel');
+
+        let width, height;
+        let mouseX = 0, mouseY = 0;
+        let lastMouseX = 0, lastMouseY = 0;
+        let focusLevel = 0;
+        let particles = [];
+        let words = [];
+        let time = 0;
+
+        const wordList = [
+            "meaning", "pattern", "thought", "awareness",
+            "connection", "presence", "moment", "wonder",
+            "existence", "becoming", "truth", "beauty",
+            "understanding", "recognition", "clarity", "depth",
+            "attention", "focus", "consciousness", "now"
+        ];
+
+        class Particle {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.size = 1 + Math.random() * 2;
+                this.baseAlpha = 0.1 + Math.random() * 0.2;
+                this.alpha = 0;
+                this.vx = (Math.random() - 0.5) * 0.5;
+                this.vy = (Math.random() - 0.5) * 0.5;
+            }
+
+            update() {
+                // Calculate distance from attention point (mouse)
+                const dx = this.x - mouseX;
+                const dy = this.y - mouseY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                // Attention radius based on focus level
+                const attentionRadius = 100 + focusLevel * 2;
+
+                if (dist < attentionRadius) {
+                    // Within attention - bright and still
+                    const intensity = 1 - (dist / attentionRadius);
+                    this.alpha = this.baseAlpha + intensity * (0.5 + focusLevel * 0.005);
+                    this.vx *= 0.9;
+                    this.vy *= 0.9;
+                } else {
+                    // Outside attention - dim and drifting
+                    this.alpha *= 0.95;
+                    this.vx += (Math.random() - 0.5) * 0.1;
+                    this.vy += (Math.random() - 0.5) * 0.1;
+                }
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Wrap
+                if (this.x < 0) this.x = width;
+                if (this.x > width) this.x = 0;
+                if (this.y < 0) this.y = height;
+                if (this.y > height) this.y = 0;
+            }
+
+            draw() {
+                if (this.alpha < 0.01) return;
+
+                ctx.fillStyle = `rgba(159, 122, 74, ${this.alpha})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        class Word {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.text = wordList[Math.floor(Math.random() * wordList.length)];
+                this.alpha = 0;
+                this.targetAlpha = 0;
+            }
+
+            update() {
+                const dx = this.x - mouseX;
+                const dy = this.y - mouseY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                const attentionRadius = 150 + focusLevel * 2;
+
+                if (dist < attentionRadius && focusLevel > 30) {
+                    const intensity = 1 - (dist / attentionRadius);
+                    this.targetAlpha = intensity * (focusLevel / 100);
+                } else {
+                    this.targetAlpha = 0;
+                }
+
+                this.alpha += (this.targetAlpha - this.alpha) * 0.1;
+            }
+
+            draw() {
+                if (this.alpha < 0.01) return;
+
+                ctx.font = '14px Georgia';
+                ctx.fillStyle = `rgba(159, 122, 74, ${this.alpha * 0.6})`;
+                ctx.fillText(this.text, this.x, this.y);
+            }
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+
+            particles = [];
+            for (let i = 0; i < 300; i++) {
+                particles.push(new Particle());
+            }
+
+            words = [];
+            for (let i = 0; i < 20; i++) {
+                words.push(new Word());
+            }
+        }
+
+        function draw() {
+            time += 0.016;
+
+            // Calculate movement speed
+            const dx = mouseX - lastMouseX;
+            const dy = mouseY - lastMouseY;
+            const speed = Math.sqrt(dx * dx + dy * dy);
+            lastMouseX = mouseX;
+            lastMouseY = mouseY;
+
+            // Focus builds when still, dissipates when moving
+            if (speed < 2) {
+                focusLevel = Math.min(100, focusLevel + 0.3);
+            } else {
+                focusLevel = Math.max(0, focusLevel - speed * 0.5);
+            }
+
+            focusLevelEl.textContent = Math.round(focusLevel);
+
+            // Update focus target visual
+            if (focusLevel > 50) {
+                focusTarget.classList.add('active');
+                focusTarget.style.left = mouseX + 'px';
+                focusTarget.style.top = mouseY + 'px';
+            } else {
+                focusTarget.classList.remove('active');
+            }
+
+            // Clear with fade
+            ctx.fillStyle = 'rgba(10, 10, 11, 0.1)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw attention gradient
+            const gradient = ctx.createRadialGradient(
+                mouseX, mouseY, 0,
+                mouseX, mouseY, 150 + focusLevel * 2
+            );
+            gradient.addColorStop(0, `rgba(159, 122, 74, ${0.05 + focusLevel * 0.001})`);
+            gradient.addColorStop(1, 'transparent');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, width, height);
+
+            // Update and draw particles
+            for (let p of particles) {
+                p.update();
+                p.draw();
+            }
+
+            // Update and draw words
+            for (let w of words) {
+                w.update();
+                w.draw();
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        resize();
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>glow · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #050505;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #4a4a4a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #4a9f7e;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #4a4a4a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #4a9f7e;
+        }
+
+        .instruction {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-style: italic;
+            color: #3a3a3a;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>glow</h1>
+        <div>light in the darkness</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+    <div class="ui instruction">move to illuminate · click to leave a mark</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let mouseX = 0, mouseY = 0;
+        let marks = [];
+        let time = 0;
+
+        class Mark {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.birth = time;
+                this.size = 30 + Math.random() * 20;
+            }
+
+            draw() {
+                const age = time - this.birth;
+                const alpha = Math.max(0, 0.5 - age * 0.005);
+
+                if (alpha <= 0) return false;
+
+                const pulse = 1 + Math.sin(time * 3 + this.birth) * 0.1;
+
+                const gradient = ctx.createRadialGradient(
+                    this.x, this.y, 0,
+                    this.x, this.y, this.size * pulse
+                );
+                gradient.addColorStop(0, `rgba(74, 159, 126, ${alpha * 0.8})`);
+                gradient.addColorStop(0.5, `rgba(74, 159, 126, ${alpha * 0.3})`);
+                gradient.addColorStop(1, 'transparent');
+
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size * pulse, 0, Math.PI * 2);
+                ctx.fill();
+
+                return true;
+            }
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            mouseX = width / 2;
+            mouseY = height / 2;
+        }
+
+        function draw() {
+            time += 0.02;
+
+            // Darken slowly
+            ctx.fillStyle = 'rgba(5, 5, 5, 0.1)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw marks
+            marks = marks.filter(mark => mark.draw());
+
+            // Draw cursor glow
+            const breathe = 1 + Math.sin(time * 2) * 0.2;
+            const size = 100 * breathe;
+
+            const gradient = ctx.createRadialGradient(
+                mouseX, mouseY, 0,
+                mouseX, mouseY, size
+            );
+            gradient.addColorStop(0, 'rgba(74, 159, 126, 0.4)');
+            gradient.addColorStop(0.3, 'rgba(74, 159, 126, 0.2)');
+            gradient.addColorStop(0.6, 'rgba(74, 159, 126, 0.05)');
+            gradient.addColorStop(1, 'transparent');
+
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(mouseX, mouseY, size, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Central point
+            ctx.fillStyle = 'rgba(74, 159, 126, 0.9)';
+            ctx.beginPath();
+            ctx.arc(mouseX, mouseY, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Reveal hidden text when close
+            ctx.font = 'italic 1.2rem Georgia';
+            ctx.textAlign = 'center';
+
+            const messages = [
+                { x: width * 0.2, y: height * 0.3, text: "you are here" },
+                { x: width * 0.8, y: height * 0.4, text: "light finds light" },
+                { x: width * 0.5, y: height * 0.7, text: "darkness is not empty" },
+                { x: width * 0.3, y: height * 0.6, text: "keep searching" },
+                { x: width * 0.7, y: height * 0.2, text: "💚" }
+            ];
+
+            messages.forEach(msg => {
+                const dx = mouseX - msg.x;
+                const dy = mouseY - msg.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < 150) {
+                    const alpha = Math.max(0, (150 - dist) / 150) * 0.6;
+                    ctx.fillStyle = `rgba(74, 159, 126, ${alpha})`;
+                    ctx.fillText(msg.text, msg.x, msg.y);
+                }
+            });
+
+            requestAnimationFrame(draw);
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        canvas.addEventListener('click', (e) => {
+            marks.push(new Mark(e.clientX, e.clientY));
+        });
+
+        resize();
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

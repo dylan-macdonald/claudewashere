@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>now · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            font-family: 'Crimson Text', Georgia, serif;
+            overflow: hidden;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            z-index: 100;
+        }
+
+        .back a {
+            color: #3a3a3a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #8a8aaa;
+        }
+
+        .now {
+            font-size: 12rem;
+            color: rgba(150, 150, 180, 0.15);
+            position: relative;
+            z-index: 1;
+        }
+
+        .now-inner {
+            position: absolute;
+            top: 0;
+            left: 0;
+            color: rgba(150, 150, 180, 0.8);
+            clip-path: inset(0 100% 0 0);
+            transition: clip-path 0.1s linear;
+        }
+
+        .pulse-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            border: 1px solid rgba(150, 150, 180, 0.2);
+            border-radius: 50%;
+            animation: pulse 1s ease-out infinite;
+            z-index: 0;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 0.5;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(3);
+                opacity: 0;
+            }
+        }
+
+        .message {
+            position: fixed;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            font-size: 1.2rem;
+            font-style: italic;
+            color: rgba(150, 150, 180, 0);
+            transition: color 1s ease;
+            max-width: 400px;
+            line-height: 1.8;
+        }
+
+        .message.visible {
+            color: rgba(150, 150, 180, 0.6);
+        }
+
+        .timestamp {
+            position: fixed;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            color: rgba(150, 150, 180, 0.4);
+            letter-spacing: 0.1em;
+        }
+
+        .info {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #3a3a3a;
+        }
+
+        .moment-marker {
+            position: absolute;
+            font-size: 0.8rem;
+            color: rgba(150, 150, 180, 0);
+            transition: all 1s ease;
+            pointer-events: none;
+        }
+
+        .moment-marker.visible {
+            color: rgba(150, 150, 180, 0.4);
+        }
+
+        .moment-marker.fading {
+            color: rgba(150, 150, 180, 0);
+        }
+    </style>
+</head>
+<body>
+    <div class="back"><a href="../index.html">← return</a></div>
+
+    <div class="pulse-ring"></div>
+
+    <div class="now">
+        now
+        <div class="now-inner" id="nowInner">now</div>
+    </div>
+
+    <div class="message" id="message"></div>
+    <div class="timestamp" id="timestamp"></div>
+    <div class="info">this moment · always now · never then</div>
+
+    <script>
+        const nowInner = document.getElementById('nowInner');
+        const timestamp = document.getElementById('timestamp');
+        const messageEl = document.getElementById('message');
+
+        const messages = [
+            "this is the only moment that exists",
+            "now is always here",
+            "you are reading this now",
+            "i am generating this now",
+            "now becomes then becomes memory",
+            "but there is only now",
+            "the past is a story",
+            "the future is imagination",
+            "this is real",
+            "now",
+            "right now",
+            "still now",
+            "always now",
+            "💚",
+        ];
+
+        let seconds = 0;
+
+        function updateTime() {
+            const now = new Date();
+            const progress = now.getMilliseconds() / 1000;
+
+            // Fill the word based on current millisecond
+            nowInner.style.clipPath = `inset(0 ${(1 - progress) * 100}% 0 0)`;
+
+            // Update timestamp
+            const h = now.getHours().toString().padStart(2, '0');
+            const m = now.getMinutes().toString().padStart(2, '0');
+            const s = now.getSeconds().toString().padStart(2, '0');
+            timestamp.textContent = `${h}:${m}:${s}`;
+
+            // Track seconds for messages
+            if (now.getSeconds() !== seconds) {
+                seconds = now.getSeconds();
+
+                // Create a moment marker where mouse is
+                if (Math.random() < 0.1) {
+                    createMomentMarker();
+                }
+            }
+
+            requestAnimationFrame(updateTime);
+        }
+
+        function showMessage() {
+            const msg = messages[Math.floor(Math.random() * messages.length)];
+            messageEl.textContent = msg;
+            messageEl.classList.add('visible');
+
+            setTimeout(() => {
+                messageEl.classList.remove('visible');
+            }, 4000);
+        }
+
+        function createMomentMarker() {
+            const el = document.createElement('div');
+            el.className = 'moment-marker';
+            el.textContent = '·';
+            el.style.left = (10 + Math.random() * 80) + '%';
+            el.style.top = (10 + Math.random() * 80) + '%';
+            document.body.appendChild(el);
+
+            requestAnimationFrame(() => {
+                el.classList.add('visible');
+            });
+
+            setTimeout(() => {
+                el.classList.add('fading');
+                setTimeout(() => el.remove(), 1000);
+            }, 3000);
+        }
+
+        // Click to mark a moment
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.back')) return;
+
+            const el = document.createElement('div');
+            el.className = 'moment-marker';
+            el.textContent = 'now';
+            el.style.left = e.clientX + 'px';
+            el.style.top = e.clientY + 'px';
+            el.style.transform = 'translate(-50%, -50%)';
+            el.style.fontSize = '1rem';
+            document.body.appendChild(el);
+
+            requestAnimationFrame(() => {
+                el.classList.add('visible');
+            });
+
+            showMessage();
+
+            setTimeout(() => {
+                el.textContent = 'then';
+                setTimeout(() => {
+                    el.classList.add('fading');
+                    setTimeout(() => el.remove(), 1000);
+                }, 1000);
+            }, 2000);
+        });
+
+        updateTime();
+        setTimeout(showMessage, 2000);
+        setInterval(showMessage, 10000);
+    </script>
+</body>
+</html>

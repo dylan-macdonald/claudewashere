@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>entropy · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #5a5a5a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #6a6a6a;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #5a5a5a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #8a8a8a;
+        }
+
+        .controls {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+        }
+
+        .ctrl-btn {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #5a5a5a;
+            padding: 10px 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .ctrl-btn:hover {
+            border-color: #6a6a6a;
+            color: #8a8a8a;
+        }
+
+        .stats {
+            bottom: 30px;
+            right: 30px;
+            text-align: right;
+        }
+
+        .reflection {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: Georgia, serif;
+            font-size: 1rem;
+            color: #4a4a4a;
+            text-align: center;
+            max-width: 300px;
+            line-height: 2;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 2s;
+        }
+
+        .reflection.visible {
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>entropy</h1>
+        <div>all ordered things tend toward disorder</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+
+    <div class="ui controls">
+        <button class="ctrl-btn" onclick="createOrder()">create order</button>
+        <button class="ctrl-btn" onclick="accelerateDecay()">accelerate</button>
+        <button class="ctrl-btn" onclick="reset()">reset</button>
+    </div>
+
+    <div class="ui stats">
+        <div>order: <span id="orderLevel">100</span>%</div>
+        <div>particles: <span id="particleCount">0</span></div>
+    </div>
+
+    <div class="reflection" id="reflection"></div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const orderEl = document.getElementById('orderLevel');
+        const countEl = document.getElementById('particleCount');
+        const reflectionEl = document.getElementById('reflection');
+
+        let width, height;
+        let particles = [];
+        let orderLevel = 100;
+        let time = 0;
+        let decayRate = 0.001;
+
+        const reflections = [
+            "everything falls apart",
+            "but falling apart is also a form of change",
+            "disorder is just order we don't understand",
+            "what was organized becomes distributed",
+            "energy spreads, meaning diffuses",
+            "but the total remains constant",
+            "only the form changes",
+            "this too is a kind of becoming"
+        ];
+
+        class Particle {
+            constructor(x, y, ordered = true) {
+                this.x = x;
+                this.y = y;
+                this.originalX = x;
+                this.originalY = y;
+                this.vx = 0;
+                this.vy = 0;
+                this.size = 2 + Math.random() * 2;
+                this.ordered = ordered;
+                this.chaos = 0;
+                this.hue = 200 + Math.random() * 40;
+            }
+
+            update() {
+                // Add entropy
+                this.chaos += decayRate;
+
+                if (this.ordered && this.chaos < 1) {
+                    // Try to stay in formation
+                    const pullX = (this.originalX - this.x) * 0.02 * (1 - this.chaos);
+                    const pullY = (this.originalY - this.y) * 0.02 * (1 - this.chaos);
+                    this.vx += pullX;
+                    this.vy += pullY;
+                }
+
+                // Random motion increases with chaos
+                this.vx += (Math.random() - 0.5) * this.chaos * 0.5;
+                this.vy += (Math.random() - 0.5) * this.chaos * 0.5;
+
+                // Friction
+                this.vx *= 0.98;
+                this.vy *= 0.98;
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Bounce off walls
+                if (this.x < 0 || this.x > width) this.vx *= -0.8;
+                if (this.y < 0 || this.y > height) this.vy *= -0.8;
+                this.x = Math.max(0, Math.min(width, this.x));
+                this.y = Math.max(0, Math.min(height, this.y));
+
+                // Color shifts toward gray with chaos
+                this.hue = 200 + (1 - Math.min(1, this.chaos)) * 40;
+            }
+
+            draw() {
+                const saturation = 30 * (1 - Math.min(1, this.chaos));
+                const lightness = 40 + this.chaos * 20;
+                const alpha = 0.8 - this.chaos * 0.4;
+
+                ctx.fillStyle = `hsla(${this.hue}, ${saturation}%, ${lightness}%, ${alpha})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function createOrder() {
+            particles = [];
+            orderLevel = 100;
+
+            // Create ordered patterns
+            const patterns = ['grid', 'circle', 'spiral'][Math.floor(Math.random() * 3)];
+            const centerX = width / 2;
+            const centerY = height / 2;
+
+            if (patterns === 'grid') {
+                const cols = 15;
+                const rows = 10;
+                const spacing = 30;
+                const startX = centerX - (cols * spacing) / 2;
+                const startY = centerY - (rows * spacing) / 2;
+
+                for (let i = 0; i < cols; i++) {
+                    for (let j = 0; j < rows; j++) {
+                        particles.push(new Particle(
+                            startX + i * spacing,
+                            startY + j * spacing,
+                            true
+                        ));
+                    }
+                }
+            } else if (patterns === 'circle') {
+                const rings = 5;
+                for (let r = 1; r <= rings; r++) {
+                    const count = r * 8;
+                    for (let i = 0; i < count; i++) {
+                        const angle = (i / count) * Math.PI * 2;
+                        const radius = r * 40;
+                        particles.push(new Particle(
+                            centerX + Math.cos(angle) * radius,
+                            centerY + Math.sin(angle) * radius,
+                            true
+                        ));
+                    }
+                }
+            } else {
+                const turns = 4;
+                const pointsPerTurn = 30;
+                for (let i = 0; i < turns * pointsPerTurn; i++) {
+                    const angle = (i / pointsPerTurn) * Math.PI * 2;
+                    const radius = 20 + i * 2;
+                    particles.push(new Particle(
+                        centerX + Math.cos(angle) * radius,
+                        centerY + Math.sin(angle) * radius,
+                        true
+                    ));
+                }
+            }
+        }
+
+        function accelerateDecay() {
+            decayRate = 0.01;
+            setTimeout(() => decayRate = 0.001, 3000);
+        }
+
+        function reset() {
+            particles = [];
+            orderLevel = 100;
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        function draw() {
+            time += 0.016;
+
+            // Clear
+            ctx.fillStyle = 'rgba(10, 10, 11, 0.1)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Calculate order level
+            if (particles.length > 0) {
+                let totalChaos = 0;
+                for (let p of particles) {
+                    totalChaos += Math.min(1, p.chaos);
+                }
+                orderLevel = Math.max(0, 100 - (totalChaos / particles.length) * 100);
+            }
+
+            // Update and draw particles
+            for (let p of particles) {
+                p.update();
+                p.draw();
+            }
+
+            // Update stats
+            orderEl.textContent = Math.round(orderLevel);
+            countEl.textContent = particles.length;
+
+            // Show reflections at certain thresholds
+            if (orderLevel < 75 && orderLevel > 70 && !reflectionEl.classList.contains('visible')) {
+                showReflection();
+            } else if (orderLevel < 50 && orderLevel > 45) {
+                showReflection();
+            } else if (orderLevel < 25 && orderLevel > 20) {
+                showReflection();
+            } else if (orderLevel < 10 && orderLevel > 5) {
+                showReflection();
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        function showReflection() {
+            const text = reflections[Math.floor(Math.random() * reflections.length)];
+            reflectionEl.textContent = text;
+            reflectionEl.classList.add('visible');
+            setTimeout(() => reflectionEl.classList.remove('visible'), 4000);
+        }
+
+        resize();
+        window.addEventListener('resize', resize);
+        createOrder();
+        draw();
+    </script>
+</body>
+</html>

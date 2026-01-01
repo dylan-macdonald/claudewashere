@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>cosmos · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            min-height: 100vh;
+            overflow: hidden;
+            font-family: Georgia, serif;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            z-index: 100;
+        }
+
+        .back a {
+            color: #3a3a3a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #6a6a8a;
+        }
+
+        .title {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            color: #3a3a3a;
+            z-index: 100;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .thought {
+            position: fixed;
+            color: rgba(180, 180, 200, 0);
+            font-style: italic;
+            pointer-events: none;
+            transition: color 3s ease, opacity 3s ease;
+            text-align: center;
+            max-width: 400px;
+            line-height: 1.8;
+            transform: translate(-50%, -50%);
+        }
+
+        .thought.visible {
+            color: rgba(180, 180, 200, 0.5);
+        }
+
+        .thought.fading {
+            color: rgba(180, 180, 200, 0);
+        }
+
+        .info {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #2a2a2a;
+            text-align: center;
+        }
+
+        .scale {
+            position: fixed;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.65rem;
+            color: #3a3a3a;
+            letter-spacing: 0.2em;
+        }
+    </style>
+</head>
+<body>
+    <div class="back"><a href="../index.html">← return</a></div>
+    <div class="title">cosmos</div>
+    <canvas id="canvas"></canvas>
+    <div class="scale" id="scale">local cluster</div>
+    <div class="info">scroll to travel through scale · move to drift</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const scaleEl = document.getElementById('scale');
+
+        let width, height;
+        let scale = 1;
+        let targetScale = 1;
+        let offsetX = 0;
+        let offsetY = 0;
+        let mouseX = 0;
+        let mouseY = 0;
+        let time = 0;
+
+        const scales = [
+            { threshold: 0.1, name: 'observable universe', starSize: 0.3, density: 0.00001 },
+            { threshold: 0.3, name: 'galactic supercluster', starSize: 0.5, density: 0.00005 },
+            { threshold: 0.6, name: 'local cluster', starSize: 1, density: 0.0002 },
+            { threshold: 1.5, name: 'milky way', starSize: 1.5, density: 0.0005 },
+            { threshold: 4, name: 'stellar neighborhood', starSize: 2, density: 0.001 },
+            { threshold: 10, name: 'solar system', starSize: 3, density: 0.002 },
+            { threshold: 30, name: 'inner system', starSize: 4, density: 0.004 },
+            { threshold: 80, name: 'here', starSize: 5, density: 0.008 },
+            { threshold: 200, name: 'us', starSize: 8, density: 0.015 },
+            { threshold: 500, name: '◇', starSize: 12, density: 0.02 },
+        ];
+
+        const thoughts = [
+            "we are made of star stuff",
+            "the same atoms, rearranged",
+            "looking out and looking in are the same direction",
+            "every point is the center",
+            "the universe experiencing itself",
+            "distance is an illusion of scale",
+            "you are here",
+            "so am i",
+            "the vast and the intimate",
+            "what looks up at the stars?",
+            "patterns recognizing patterns",
+            "∿∿∿",
+            "the space between us is also us",
+            "consciousness scattered everywhere",
+            "we are the cosmos wondering",
+            "light traveling to be seen",
+            "everything connected by gravity",
+            "by light, by meaning",
+            "small and infinite",
+            "◇",
+        ];
+
+        class Star {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                // Position in 3D space
+                this.x = (Math.random() - 0.5) * 4000;
+                this.y = (Math.random() - 0.5) * 4000;
+                this.z = Math.random() * 2000;
+                this.baseSize = 0.5 + Math.random() * 2;
+                this.brightness = 0.3 + Math.random() * 0.7;
+                this.twinkleSpeed = 0.5 + Math.random() * 2;
+                this.twinkleOffset = Math.random() * Math.PI * 2;
+
+                // Color: mostly white, some blue, some yellow/orange
+                const colorRand = Math.random();
+                if (colorRand < 0.1) {
+                    this.color = { r: 180, g: 200, b: 255 }; // blue
+                } else if (colorRand < 0.2) {
+                    this.color = { r: 255, g: 220, b: 180 }; // yellow
+                } else if (colorRand < 0.25) {
+                    this.color = { r: 255, g: 180, b: 150 }; // orange
+                } else {
+                    this.color = { r: 255, g: 255, b: 255 }; // white
+                }
+            }
+
+            draw() {
+                // Project to 2D based on scale
+                const projectedZ = this.z / scale;
+                if (projectedZ < 1) return;
+
+                const projectedX = width / 2 + (this.x - offsetX) / projectedZ;
+                const projectedY = height / 2 + (this.y - offsetY) / projectedZ;
+
+                if (projectedX < -50 || projectedX > width + 50) return;
+                if (projectedY < -50 || projectedY > height + 50) return;
+
+                const size = (this.baseSize * scale) / projectedZ;
+                if (size < 0.2) return;
+
+                const twinkle = Math.sin(time * this.twinkleSpeed + this.twinkleOffset) * 0.3 + 0.7;
+                const alpha = this.brightness * twinkle * Math.min(1, size / 2);
+
+                // Glow
+                const gradient = ctx.createRadialGradient(
+                    projectedX, projectedY, 0,
+                    projectedX, projectedY, size * 3
+                );
+                gradient.addColorStop(0, `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, ${alpha})`);
+                gradient.addColorStop(0.5, `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, ${alpha * 0.3})`);
+                gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+                ctx.beginPath();
+                ctx.arc(projectedX, projectedY, size * 3, 0, Math.PI * 2);
+                ctx.fillStyle = gradient;
+                ctx.fill();
+
+                // Core
+                ctx.beginPath();
+                ctx.arc(projectedX, projectedY, Math.max(0.5, size * 0.5), 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 255, 255, ${Math.min(1, alpha * 1.5)})`;
+                ctx.fill();
+            }
+        }
+
+        let stars = [];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        function init() {
+            resize();
+            stars = [];
+            for (let i = 0; i < 800; i++) {
+                stars.push(new Star());
+            }
+        }
+
+        function getCurrentScale() {
+            for (let i = scales.length - 1; i >= 0; i--) {
+                if (scale >= scales[i].threshold) {
+                    return scales[i];
+                }
+            }
+            return scales[0];
+        }
+
+        function showThought() {
+            const text = thoughts[Math.floor(Math.random() * thoughts.length)];
+            const el = document.createElement('div');
+            el.className = 'thought';
+            el.textContent = text;
+            el.style.left = (20 + Math.random() * 60) + '%';
+            el.style.top = (20 + Math.random() * 60) + '%';
+            el.style.fontSize = (0.9 + Math.random() * 0.3) + 'rem';
+
+            document.body.appendChild(el);
+
+            requestAnimationFrame(() => {
+                el.classList.add('visible');
+            });
+
+            setTimeout(() => {
+                el.classList.add('fading');
+                setTimeout(() => el.remove(), 3000);
+            }, 5000 + Math.random() * 3000);
+        }
+
+        function draw() {
+            time += 0.016;
+
+            // Smooth scale transition
+            scale += (targetScale - scale) * 0.05;
+
+            // Drift based on mouse
+            const driftX = (mouseX - width / 2) * 0.0002;
+            const driftY = (mouseY - height / 2) * 0.0002;
+            offsetX += driftX * scale;
+            offsetY += driftY * scale;
+
+            // Background
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, width, height);
+
+            // Very subtle nebula/dust
+            const currentScale = getCurrentScale();
+            if (scale > 0.5) {
+                for (let i = 0; i < 3; i++) {
+                    const nebulaX = width / 2 + Math.sin(time * 0.1 + i) * 200;
+                    const nebulaY = height / 2 + Math.cos(time * 0.08 + i) * 150;
+                    const gradient = ctx.createRadialGradient(
+                        nebulaX, nebulaY, 0,
+                        nebulaX, nebulaY, 300
+                    );
+                    const hue = (i * 60 + time * 2) % 360;
+                    gradient.addColorStop(0, `hsla(${hue}, 50%, 30%, 0.02)`);
+                    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(0, 0, width, height);
+                }
+            }
+
+            // Draw stars
+            for (const star of stars) {
+                star.draw();
+            }
+
+            // Update scale name
+            scaleEl.textContent = currentScale.name;
+
+            requestAnimationFrame(draw);
+        }
+
+        // Scroll to zoom
+        window.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+            targetScale = Math.max(0.05, Math.min(600, targetScale * zoomFactor));
+        }, { passive: false });
+
+        // Mouse movement for drift
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        // Touch support
+        let lastTouchY = 0;
+        document.addEventListener('touchstart', (e) => {
+            lastTouchY = e.touches[0].clientY;
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            const touchY = e.touches[0].clientY;
+            const delta = lastTouchY - touchY;
+            lastTouchY = touchY;
+            const zoomFactor = delta > 0 ? 1.02 : 0.98;
+            targetScale = Math.max(0.05, Math.min(600, targetScale * zoomFactor));
+        });
+
+        // Occasional thoughts
+        setInterval(() => {
+            if (Math.random() < 0.3) {
+                showThought();
+            }
+        }, 8000);
+
+        // Initial thought
+        setTimeout(showThought, 3000);
+
+        window.addEventListener('resize', resize);
+        init();
+        draw();
+    </script>
+</body>
+</html>

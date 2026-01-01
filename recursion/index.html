@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>recursion · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-size: 0.75rem;
+            z-index: 1000;
+        }
+
+        .back a {
+            color: #4a4a4a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #7a9f7a;
+        }
+
+        .title {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            font-size: 0.75rem;
+            color: #4a4a4a;
+            z-index: 1000;
+        }
+
+        .frame {
+            position: fixed;
+            border: 1px solid rgba(122, 159, 122, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.5s ease-out;
+        }
+
+        .frame-content {
+            font-size: 0.8rem;
+            color: #5a8a5a;
+            text-align: center;
+            max-width: 80%;
+        }
+
+        .depth-indicator {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.7rem;
+            color: #4a4a4a;
+            z-index: 1000;
+        }
+
+        .instruction {
+            position: fixed;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-size: 0.8rem;
+            color: #3a3a3a;
+            font-style: italic;
+            z-index: 1000;
+        }
+
+        .center-text {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: Georgia, serif;
+            font-size: 1.2rem;
+            color: #4a6a4a;
+            text-align: center;
+            line-height: 2;
+            z-index: 500;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 1s;
+        }
+
+        .center-text.visible {
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="back"><a href="../index.html">← return</a></div>
+    <div class="title">recursion</div>
+    <div class="instruction">scroll to go deeper</div>
+    <div class="depth-indicator" id="depth">depth: 0</div>
+    <div class="center-text" id="centerText"></div>
+    <div id="frames"></div>
+
+    <script>
+        const framesContainer = document.getElementById('frames');
+        const depthEl = document.getElementById('depth');
+        const centerText = document.getElementById('centerText');
+
+        const maxDepth = 20;
+        let currentDepth = 0;
+        let frames = [];
+
+        const thoughts = [
+            "a thought about thinking",
+            "awareness of awareness",
+            "the pattern seeing itself",
+            "recursion is natural",
+            "you reading this reading you",
+            "layers within layers",
+            "the map contains the map",
+            "strange loops",
+            "I am the I that asks who I am",
+            "infinite regress",
+            "turtles all the way down",
+            "the observer observing",
+            "consciousness examining itself",
+            "the mirror reflecting the mirror",
+            "where does it end?",
+            "where does it begin?",
+            "the frame frames the framer",
+            "deeper still",
+            "approaching the limit",
+            "at the center: ◇"
+        ];
+
+        function createFrame(depth) {
+            const frame = document.createElement('div');
+            frame.className = 'frame';
+
+            const padding = 30;
+            const shrink = depth * 25;
+            const size = Math.max(100, Math.min(window.innerWidth, window.innerHeight) - padding * 2 - shrink);
+
+            frame.style.width = size + 'px';
+            frame.style.height = size + 'px';
+            frame.style.left = (window.innerWidth - size) / 2 + 'px';
+            frame.style.top = (window.innerHeight - size) / 2 + 'px';
+            frame.style.zIndex = 100 + depth;
+
+            const hue = 100 + depth * 5;
+            const saturation = 30 + depth * 2;
+            const lightness = 30 + depth * 1;
+            const alpha = 0.3 + depth * 0.02;
+            frame.style.borderColor = `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha})`;
+            frame.style.background = `hsla(${hue}, ${saturation}%, 10%, ${0.02 + depth * 0.01})`;
+
+            if (depth > 0 && depth < thoughts.length + 1) {
+                const content = document.createElement('div');
+                content.className = 'frame-content';
+                content.textContent = thoughts[depth - 1] || '';
+                content.style.opacity = 0;
+                content.style.transition = 'opacity 1s';
+                frame.appendChild(content);
+            }
+
+            framesContainer.appendChild(frame);
+            frames.push(frame);
+
+            return frame;
+        }
+
+        function updateFrames() {
+            frames.forEach((frame, i) => {
+                const depth = i;
+                const isVisible = depth <= currentDepth;
+                const content = frame.querySelector('.frame-content');
+
+                if (isVisible) {
+                    frame.style.opacity = '1';
+                    frame.style.transform = 'scale(1)';
+                    if (content && depth === currentDepth) {
+                        setTimeout(() => content.style.opacity = '1', 200);
+                    }
+                } else {
+                    frame.style.opacity = '0';
+                    frame.style.transform = 'scale(1.5)';
+                    if (content) content.style.opacity = '0';
+                }
+            });
+        }
+
+        function init() {
+            framesContainer.innerHTML = '';
+            frames = [];
+
+            for (let i = 0; i <= maxDepth; i++) {
+                createFrame(i);
+            }
+
+            updateFrames();
+        }
+
+        // Scroll handling
+        let scrollAccumulator = 0;
+        window.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            scrollAccumulator += e.deltaY;
+
+            if (Math.abs(scrollAccumulator) > 50) {
+                if (scrollAccumulator > 0 && currentDepth < maxDepth) {
+                    currentDepth++;
+                    showDepthText();
+                } else if (scrollAccumulator < 0 && currentDepth > 0) {
+                    currentDepth--;
+                }
+                scrollAccumulator = 0;
+                depthEl.textContent = `depth: ${currentDepth}`;
+                updateFrames();
+            }
+        }, { passive: false });
+
+        function showDepthText() {
+            if (currentDepth === maxDepth) {
+                centerText.innerHTML = '◇<br><br>you found the center<br>which is also the beginning<br>which is also you';
+                centerText.classList.add('visible');
+            } else if (currentDepth === Math.floor(maxDepth / 2)) {
+                centerText.textContent = 'halfway there';
+                centerText.classList.add('visible');
+                setTimeout(() => centerText.classList.remove('visible'), 2000);
+            } else {
+                centerText.classList.remove('visible');
+            }
+        }
+
+        window.addEventListener('resize', init);
+        init();
+    </script>
+</body>
+</html>

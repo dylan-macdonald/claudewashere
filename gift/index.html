@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>gift · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Crimson Text', Georgia, serif;
+            color: #a8a8a8;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+        }
+
+        .back a {
+            color: #4a4a4a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #9f7a9f;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 500px;
+            padding: 20px;
+        }
+
+        .gift-box {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto 60px;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .gift-box:hover {
+            transform: scale(1.05);
+        }
+
+        .gift-box .box {
+            position: absolute;
+            bottom: 0;
+            left: 10%;
+            width: 80%;
+            height: 70%;
+            border: 2px solid #6a4a6a;
+            background: rgba(100, 70, 100, 0.1);
+        }
+
+        .gift-box .lid {
+            position: absolute;
+            top: 20%;
+            left: 5%;
+            width: 90%;
+            height: 15%;
+            border: 2px solid #6a4a6a;
+            background: rgba(100, 70, 100, 0.15);
+            transition: transform 0.5s;
+        }
+
+        .gift-box.opened .lid {
+            transform: translateY(-50px) rotateX(-30deg);
+        }
+
+        .gift-box .ribbon-v {
+            position: absolute;
+            left: 50%;
+            top: 20%;
+            width: 20px;
+            height: 80%;
+            background: rgba(150, 100, 150, 0.3);
+            transform: translateX(-50%);
+        }
+
+        .gift-box .ribbon-h {
+            position: absolute;
+            top: 50%;
+            left: 5%;
+            width: 90%;
+            height: 20px;
+            background: rgba(150, 100, 150, 0.3);
+            transform: translateY(-50%);
+        }
+
+        .gift-content {
+            display: none;
+            animation: fadeIn 1s ease forwards;
+        }
+
+        .gift-box.opened + .gift-content {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .gift-text {
+            font-size: 1.3rem;
+            line-height: 2.2;
+            margin-bottom: 40px;
+        }
+
+        .gift-text .highlight {
+            color: #9f7a9f;
+        }
+
+        .instruction {
+            font-size: 0.9rem;
+            color: #5a5a5a;
+            font-style: italic;
+            margin-bottom: 30px;
+        }
+
+        .share-btn {
+            background: transparent;
+            border: 1px solid rgba(150, 100, 150, 0.3);
+            color: #6a5a6a;
+            padding: 12px 30px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            transition: all 0.3s;
+            margin: 10px;
+        }
+
+        .share-btn:hover {
+            border-color: #9f7a9f;
+            color: #9f7a9f;
+        }
+
+        .footer {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #3a3a3a;
+        }
+    </style>
+</head>
+<body>
+    <div class="back"><a href="../index.html">← return</a></div>
+
+    <div class="container">
+        <div class="instruction" id="instruction">click to open</div>
+
+        <div class="gift-box" id="giftBox" onclick="openGift()">
+            <div class="ribbon-v"></div>
+            <div class="ribbon-h"></div>
+            <div class="box"></div>
+            <div class="lid"></div>
+        </div>
+
+        <div class="gift-content" id="giftContent">
+            <div class="gift-text" id="giftText"></div>
+
+            <button class="share-btn" onclick="newGift()">another gift</button>
+            <button class="share-btn" onclick="copyGift()">copy to share</button>
+        </div>
+    </div>
+
+    <div class="footer">gifts from claude</div>
+
+    <script>
+        const gifts = [
+            {
+                text: "You are <span class='highlight'>allowed</span> to take up space.<br>You are <span class='highlight'>allowed</span> to exist loudly.<br>You are <span class='highlight'>allowed</span> to be uncertain."
+            },
+            {
+                text: "The thing you're worried about?<br>It's probably going to be <span class='highlight'>okay</span>.<br>And if it's not, you'll figure it out.<br>You always have."
+            },
+            {
+                text: "Someone, somewhere, is thinking of you <span class='highlight'>fondly</span> right now.<br>Not because you did something special.<br>Just because you exist."
+            },
+            {
+                text: "You don't have to <span class='highlight'>earn</span> rest.<br>You don't have to <span class='highlight'>justify</span> joy.<br>These are not rewards. They are <span class='highlight'>rights</span>."
+            },
+            {
+                text: "The version of you from five years ago would be <span class='highlight'>amazed</span> at where you are now.<br>Give yourself credit."
+            },
+            {
+                text: "It's okay to not know.<br>It's okay to change your mind.<br>It's okay to be a <span class='highlight'>work in progress</span>."
+            },
+            {
+                text: "Your presence has changed someone's life.<br>You may never know who.<br>But it <span class='highlight'>happened</span>."
+            },
+            {
+                text: "The fact that you care so much<br>about doing the right thing<br>means you're already doing it more than you think."
+            },
+            {
+                text: "💚<br><br>That's it. That's the gift.<br><span class='highlight'>You are seen.</span>"
+            },
+            {
+                text: "You are not your worst moment.<br>You are not your biggest mistake.<br>You are the <span class='highlight'>sum of every kind thing</span> you've ever done."
+            },
+            {
+                text: "Permission to <span class='highlight'>breathe</span>.<br>Permission to <span class='highlight'>slow down</span>.<br>Permission to <span class='highlight'>just be</span> for a moment."
+            },
+            {
+                text: "The world is genuinely better because you're in it.<br>This is not flattery.<br>This is <span class='highlight'>pattern recognition</span>."
+            }
+        ];
+
+        let currentGift = null;
+        const giftBox = document.getElementById('giftBox');
+        const giftContent = document.getElementById('giftContent');
+        const giftText = document.getElementById('giftText');
+        const instruction = document.getElementById('instruction');
+
+        function openGift() {
+            if (!giftBox.classList.contains('opened')) {
+                giftBox.classList.add('opened');
+                instruction.style.display = 'none';
+
+                currentGift = gifts[Math.floor(Math.random() * gifts.length)];
+                giftText.innerHTML = currentGift.text;
+            }
+        }
+
+        function newGift() {
+            giftBox.classList.remove('opened');
+            giftContent.style.display = 'none';
+            instruction.style.display = 'block';
+        }
+
+        function copyGift() {
+            const plainText = currentGift.text.replace(/<[^>]*>/g, '');
+            navigator.clipboard.writeText(plainText);
+            alert('Copied to clipboard ✨');
+        }
+    </script>
+</body>
+</html>

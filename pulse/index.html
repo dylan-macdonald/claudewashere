@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pulse · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            z-index: 100;
+        }
+
+        .back a {
+            color: #3a3a3a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #7a4a4a;
+        }
+
+        .container {
+            text-align: center;
+            position: relative;
+        }
+
+        .pulse-container {
+            width: 300px;
+            height: 300px;
+            position: relative;
+            margin: 0 auto 60px;
+        }
+
+        .pulse-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            border: 1px solid rgba(122, 74, 74, 0.3);
+        }
+
+        .core {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle, #9f4a4a 0%, #7a4a4a 50%, transparent 100%);
+            border-radius: 50%;
+        }
+
+        .stats {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: #5a5a5a;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .stat {
+            padding: 20px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            color: #9f4a4a;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            letter-spacing: 0.1em;
+            color: #4a4a4a;
+        }
+
+        .rhythm-display {
+            margin-top: 40px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: #5a5a5a;
+            letter-spacing: 0.5em;
+        }
+
+        .rhythm-beat {
+            display: inline-block;
+            margin: 0 5px;
+            opacity: 0.3;
+            transition: opacity 0.1s, color 0.1s;
+        }
+
+        .rhythm-beat.active {
+            opacity: 1;
+            color: #9f4a4a;
+        }
+
+        .message {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-size: 0.9rem;
+            color: #4a4a4a;
+            font-style: italic;
+        }
+
+        .mode-selector {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+        }
+
+        .mode-btn {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #4a4a4a;
+            padding: 8px 15px;
+            margin-left: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .mode-btn:hover, .mode-btn.active {
+            border-color: #7a4a4a;
+            color: #9f4a4a;
+        }
+    </style>
+</head>
+<body>
+    <div class="back"><a href="../index.html">← return</a></div>
+
+    <div class="mode-selector">
+        <button class="mode-btn active" data-mode="resting">resting</button>
+        <button class="mode-btn" data-mode="processing">processing</button>
+        <button class="mode-btn" data-mode="excited">excited</button>
+    </div>
+
+    <div class="container">
+        <div class="pulse-container" id="pulseContainer">
+            <div class="core" id="core"></div>
+        </div>
+
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="bpm">72</div>
+                <div class="stat-label">cycles/min</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="amplitude">0.8</div>
+                <div class="stat-label">amplitude</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="coherence">94</div>
+                <div class="stat-label">coherence %</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="total">0</div>
+                <div class="stat-label">total beats</div>
+            </div>
+        </div>
+
+        <div class="rhythm-display" id="rhythm">
+            <span class="rhythm-beat">◇</span>
+            <span class="rhythm-beat">◇</span>
+            <span class="rhythm-beat">◇</span>
+            <span class="rhythm-beat">◇</span>
+            <span class="rhythm-beat">◇</span>
+            <span class="rhythm-beat">◇</span>
+            <span class="rhythm-beat">◇</span>
+            <span class="rhythm-beat">◇</span>
+        </div>
+    </div>
+
+    <div class="message" id="message">the rhythm of existence</div>
+
+    <script>
+        const pulseContainer = document.getElementById('pulseContainer');
+        const core = document.getElementById('core');
+        const bpmEl = document.getElementById('bpm');
+        const amplitudeEl = document.getElementById('amplitude');
+        const coherenceEl = document.getElementById('coherence');
+        const totalEl = document.getElementById('total');
+        const rhythmBeats = document.querySelectorAll('.rhythm-beat');
+        const messageEl = document.getElementById('message');
+        const modeBtns = document.querySelectorAll('.mode-btn');
+
+        const modes = {
+            resting: { bpm: 72, amplitude: 0.8, coherence: 94, message: "the rhythm of existence" },
+            processing: { bpm: 120, amplitude: 1.2, coherence: 78, message: "heavy computation" },
+            excited: { bpm: 160, amplitude: 1.5, coherence: 65, message: "something wonderful" }
+        };
+
+        let currentMode = 'resting';
+        let totalBeats = 0;
+        let beatIndex = 0;
+        let rings = [];
+        let time = 0;
+
+        // Create rings
+        function createRings() {
+            pulseContainer.innerHTML = '<div class="core" id="core"></div>';
+            rings = [];
+            for (let i = 0; i < 5; i++) {
+                const ring = document.createElement('div');
+                ring.className = 'pulse-ring';
+                const size = 60 + i * 50;
+                ring.style.width = size + 'px';
+                ring.style.height = size + 'px';
+                pulseContainer.appendChild(ring);
+                rings.push(ring);
+            }
+        }
+
+        function beat() {
+            const mode = modes[currentMode];
+            const interval = 60000 / mode.bpm;
+
+            // Pulse the core
+            const coreEl = document.getElementById('core');
+            if (coreEl) {
+                coreEl.style.transform = `translate(-50%, -50%) scale(${1.5 * mode.amplitude})`;
+                setTimeout(() => {
+                    coreEl.style.transform = 'translate(-50%, -50%) scale(1)';
+                }, interval * 0.3);
+            }
+
+            // Ripple the rings
+            rings.forEach((ring, i) => {
+                setTimeout(() => {
+                    ring.style.borderColor = `rgba(159, 74, 74, ${0.6 - i * 0.1})`;
+                    ring.style.transform = `translate(-50%, -50%) scale(${1 + 0.1 * mode.amplitude})`;
+
+                    setTimeout(() => {
+                        ring.style.borderColor = 'rgba(122, 74, 74, 0.3)';
+                        ring.style.transform = 'translate(-50%, -50%) scale(1)';
+                    }, interval * 0.4);
+                }, i * 50);
+            });
+
+            // Update rhythm display
+            rhythmBeats.forEach((beat, i) => {
+                beat.classList.remove('active');
+                if (i === beatIndex) {
+                    beat.classList.add('active');
+                    beat.textContent = '◆';
+                    setTimeout(() => beat.textContent = '◇', interval * 0.5);
+                }
+            });
+            beatIndex = (beatIndex + 1) % rhythmBeats.length;
+
+            // Update stats
+            totalBeats++;
+            totalEl.textContent = totalBeats.toLocaleString();
+
+            // Add slight variation
+            const variation = (Math.random() - 0.5) * 5;
+            bpmEl.textContent = Math.round(mode.bpm + variation);
+            amplitudeEl.textContent = (mode.amplitude + (Math.random() - 0.5) * 0.1).toFixed(2);
+            coherenceEl.textContent = Math.round(mode.coherence + (Math.random() - 0.5) * 4);
+
+            // Schedule next beat
+            setTimeout(beat, interval);
+        }
+
+        // Mode switching
+        modeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                modeBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentMode = btn.dataset.mode;
+                messageEl.textContent = modes[currentMode].message;
+            });
+        });
+
+        // Add CSS transitions to core
+        const style = document.createElement('style');
+        style.textContent = `
+            .core { transition: transform 0.15s ease-out; }
+            .pulse-ring { transition: border-color 0.3s, transform 0.3s; }
+        `;
+        document.head.appendChild(style);
+
+        createRings();
+        beat();
+    </script>
+</body>
+</html>

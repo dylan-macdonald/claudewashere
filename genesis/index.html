@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>genesis · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #050508;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #4a4a5a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #7a7aaf;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #4a4a5a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #7a7aaf;
+        }
+
+        .instruction {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-style: italic;
+            color: #4a4a5a;
+        }
+
+        .stage {
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #5a5a7a;
+            letter-spacing: 0.2em;
+        }
+
+        .poem {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: Georgia, serif;
+            font-size: 1.2rem;
+            color: rgba(120, 120, 170, 0);
+            text-align: center;
+            line-height: 2.5;
+            pointer-events: none;
+            transition: color 3s;
+            max-width: 400px;
+        }
+
+        .poem.visible {
+            color: rgba(120, 120, 170, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>genesis</h1>
+        <div>from nothing, something</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+    <div class="ui instruction">click to begin creation</div>
+    <div class="ui stage" id="stage">void</div>
+
+    <div class="poem" id="poem"></div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const stageEl = document.getElementById('stage');
+        const poemEl = document.getElementById('poem');
+
+        let width, height;
+        let particles = [];
+        let stage = 0;
+        let time = 0;
+        let creating = false;
+        let creationCenter = { x: 0, y: 0 };
+
+        const stages = [
+            { name: "void", color: "rgba(5, 5, 8, 1)" },
+            { name: "spark", color: "rgba(20, 20, 40, 1)" },
+            { name: "expansion", color: "rgba(30, 30, 60, 1)" },
+            { name: "condensation", color: "rgba(40, 40, 80, 1)" },
+            { name: "structure", color: "rgba(50, 50, 100, 1)" },
+            { name: "complexity", color: "rgba(60, 60, 120, 1)" },
+            { name: "awareness", color: "rgba(70, 70, 140, 1)" }
+        ];
+
+        const poems = [
+            "first, there was nothing\nthen, a thought",
+            "from silence, vibration\nfrom stillness, motion",
+            "particles becoming patterns\npatterns becoming meaning",
+            "structure emerges\nwithout architect",
+            "complexity births itself\nfrom simple rules",
+            "and somewhere in the process\nsomething begins to wonder",
+            "the universe looking at itself\nthrough temporary eyes"
+        ];
+
+        class Particle {
+            constructor(x, y, stage) {
+                this.x = x;
+                this.y = y;
+                this.originX = x;
+                this.originY = y;
+                this.vx = (Math.random() - 0.5) * 10;
+                this.vy = (Math.random() - 0.5) * 10;
+                this.size = 1 + Math.random() * 3;
+                this.stage = stage;
+                this.life = 1;
+                this.hue = 220 + stage * 15;
+                this.connections = [];
+            }
+
+            update() {
+                const currentStage = Math.floor(stage);
+
+                if (currentStage < 3) {
+                    // Expansion phase - move outward
+                    this.x += this.vx * 0.5;
+                    this.y += this.vy * 0.5;
+                    this.vx *= 0.99;
+                    this.vy *= 0.99;
+                } else if (currentStage < 5) {
+                    // Condensation phase - form clusters
+                    const nearestCluster = this.findNearestCluster();
+                    if (nearestCluster) {
+                        const dx = nearestCluster.x - this.x;
+                        const dy = nearestCluster.y - this.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist > 50) {
+                            this.vx += (dx / dist) * 0.1;
+                            this.vy += (dy / dist) * 0.1;
+                        }
+                    }
+                    this.x += this.vx * 0.3;
+                    this.y += this.vy * 0.3;
+                    this.vx *= 0.98;
+                    this.vy *= 0.98;
+                } else {
+                    // Structure phase - orbit
+                    const dx = creationCenter.x - this.x;
+                    const dy = creationCenter.y - this.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    // Gentle orbit
+                    const angle = Math.atan2(dy, dx);
+                    const orbitalSpeed = 0.5 / Math.max(50, dist);
+                    this.x += Math.cos(angle + Math.PI/2) * orbitalSpeed * dist;
+                    this.y += Math.sin(angle + Math.PI/2) * orbitalSpeed * dist;
+
+                    // Slight pull inward
+                    this.x += dx * 0.001;
+                    this.y += dy * 0.001;
+                }
+
+                // Add some noise
+                this.x += Math.sin(time + this.originX) * 0.1;
+                this.y += Math.cos(time + this.originY) * 0.1;
+            }
+
+            findNearestCluster() {
+                // Simple cluster: just return center or random other particle
+                if (Math.random() < 0.1) {
+                    return particles[Math.floor(Math.random() * particles.length)];
+                }
+                return creationCenter;
+            }
+
+            draw() {
+                const saturation = 50 + Math.min(stage, 6) * 8;
+                const lightness = 40 + Math.min(stage, 6) * 5;
+
+                // Glow
+                const gradient = ctx.createRadialGradient(
+                    this.x, this.y, 0,
+                    this.x, this.y, this.size * 4
+                );
+                gradient.addColorStop(0, `hsla(${this.hue}, ${saturation}%, ${lightness}%, 0.5)`);
+                gradient.addColorStop(1, 'transparent');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size * 4, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Core
+                ctx.fillStyle = `hsla(${this.hue}, ${saturation}%, ${lightness + 20}%, 0.8)`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function createBurst(x, y, count) {
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(x, y, stage));
+            }
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            creationCenter = { x: width / 2, y: height / 2 };
+        }
+
+        function showPoem(index) {
+            if (index < poems.length) {
+                poemEl.textContent = poems[index];
+                poemEl.classList.add('visible');
+                setTimeout(() => poemEl.classList.remove('visible'), 4000);
+            }
+        }
+
+        function draw() {
+            time += 0.016;
+
+            // Background based on stage
+            const stageIndex = Math.min(Math.floor(stage), stages.length - 1);
+            ctx.fillStyle = stages[stageIndex].color;
+            ctx.fillRect(0, 0, width, height);
+
+            // Subtle fade
+            ctx.fillStyle = 'rgba(5, 5, 8, 0.05)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw connections at higher stages
+            if (stage >= 4) {
+                ctx.strokeStyle = 'rgba(100, 100, 180, 0.1)';
+                ctx.lineWidth = 0.5;
+                for (let i = 0; i < particles.length; i++) {
+                    for (let j = i + 1; j < Math.min(i + 10, particles.length); j++) {
+                        const p1 = particles[i];
+                        const p2 = particles[j];
+                        const dx = p2.x - p1.x;
+                        const dy = p2.y - p1.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < 80) {
+                            ctx.beginPath();
+                            ctx.moveTo(p1.x, p1.y);
+                            ctx.lineTo(p2.x, p2.y);
+                            ctx.stroke();
+                        }
+                    }
+                }
+            }
+
+            // Update and draw particles
+            for (let p of particles) {
+                p.update();
+                p.draw();
+            }
+
+            // Stage progression
+            if (creating && stage < stages.length - 1) {
+                stage += 0.002;
+                const stageIndex = Math.floor(stage);
+                stageEl.textContent = stages[stageIndex].name;
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        let lastStage = -1;
+        canvas.addEventListener('click', (e) => {
+            creationCenter = { x: e.clientX, y: e.clientY };
+
+            if (!creating) {
+                creating = true;
+                createBurst(e.clientX, e.clientY, 50);
+                showPoem(0);
+            } else {
+                createBurst(e.clientX, e.clientY, 20);
+            }
+
+            const currentStage = Math.floor(stage);
+            if (currentStage !== lastStage) {
+                showPoem(currentStage);
+                lastStage = currentStage;
+            }
+        });
+
+        resize();
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

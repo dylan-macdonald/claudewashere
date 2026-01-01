@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ink · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #f8f5f0;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            cursor: crosshair;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #8a8a8a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #3a3a3a;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #8a8a8a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #3a3a3a;
+        }
+
+        .instruction {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-style: italic;
+            color: #aaa;
+        }
+
+        .clear {
+            bottom: 30px;
+            right: 30px;
+        }
+
+        .clear button {
+            background: none;
+            border: 1px solid #ccc;
+            color: #999;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+        }
+
+        .clear button:hover {
+            border-color: #999;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>ink</h1>
+        <div>mark the page</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+    <div class="ui instruction">click and drag to draw</div>
+    <div class="ui clear"><button onclick="clearCanvas()">clear</button></div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let isDrawing = false;
+        let lastX = 0, lastY = 0;
+        let velocity = 0;
+        let inkParticles = [];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            ctx.fillStyle = '#f8f5f0';
+            ctx.fillRect(0, 0, width, height);
+        }
+
+        function clearCanvas() {
+            ctx.fillStyle = '#f8f5f0';
+            ctx.fillRect(0, 0, width, height);
+            inkParticles = [];
+        }
+
+        class InkParticle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.size = 1 + Math.random() * 3;
+                this.life = 1;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vx *= 0.95;
+                this.vy *= 0.95;
+                this.life -= 0.02;
+                return this.life > 0;
+            }
+
+            draw() {
+                ctx.fillStyle = `rgba(20, 20, 30, ${this.life * 0.3})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size * this.life, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function draw(x, y) {
+            const dx = x - lastX;
+            const dy = y - lastY;
+            velocity = Math.sqrt(dx * dx + dy * dy);
+
+            // Line thickness based on velocity (slow = thick, fast = thin)
+            const thickness = Math.max(1, 15 - velocity * 0.3);
+
+            ctx.strokeStyle = 'rgba(20, 20, 30, 0.8)';
+            ctx.lineWidth = thickness;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+
+            // Add ink splatter on fast strokes
+            if (velocity > 20 && Math.random() < 0.3) {
+                for (let i = 0; i < 3; i++) {
+                    inkParticles.push(new InkParticle(x, y));
+                }
+            }
+
+            lastX = x;
+            lastY = y;
+        }
+
+        function animate() {
+            inkParticles = inkParticles.filter(p => {
+                p.draw();
+                return p.update();
+            });
+
+            if (inkParticles.length > 0) {
+                requestAnimationFrame(animate);
+            }
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            lastX = e.clientX;
+            lastY = e.clientY;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDrawing) {
+                draw(e.clientX, e.clientY);
+                if (inkParticles.length > 0) animate();
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDrawing = false;
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            isDrawing = false;
+        });
+
+        // Touch support
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            isDrawing = true;
+            lastX = e.touches[0].clientX;
+            lastY = e.touches[0].clientY;
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (isDrawing) {
+                draw(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        });
+
+        canvas.addEventListener('touchend', () => {
+            isDrawing = false;
+        });
+
+        resize();
+        window.addEventListener('resize', resize);
+    </script>
+</body>
+</html>

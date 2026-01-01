@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>gravity · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #5a5a5a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #8a7a6a;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #5a5a5a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #8a7a6a;
+        }
+
+        .instruction {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-style: italic;
+            color: #4a4a4a;
+        }
+
+        .stats {
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>gravity</h1>
+        <div>attraction and orbits</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+    <div class="ui instruction">click to create masses · they attract each other</div>
+    <div class="ui stats"><span id="count">0</span> bodies</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const countEl = document.getElementById('count');
+
+        let width, height;
+        let bodies = [];
+        const G = 0.5; // Gravitational constant
+
+        class Body {
+            constructor(x, y, mass) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.mass = mass || 50 + Math.random() * 100;
+                this.radius = Math.sqrt(this.mass) * 0.5;
+                this.hue = 20 + Math.random() * 30;
+                this.trail = [];
+            }
+
+            update() {
+                // Gravitational attraction to all other bodies
+                for (let other of bodies) {
+                    if (other === this) continue;
+
+                    const dx = other.x - this.x;
+                    const dy = other.y - this.y;
+                    const distSq = dx * dx + dy * dy;
+                    const dist = Math.sqrt(distSq);
+
+                    if (dist < this.radius + other.radius) continue; // Skip if overlapping
+
+                    const force = (G * this.mass * other.mass) / distSq;
+                    const ax = (force * dx / dist) / this.mass;
+                    const ay = (force * dy / dist) / this.mass;
+
+                    this.vx += ax;
+                    this.vy += ay;
+                }
+
+                // Speed limit
+                const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                if (speed > 5) {
+                    this.vx = (this.vx / speed) * 5;
+                    this.vy = (this.vy / speed) * 5;
+                }
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Store trail
+                this.trail.push({ x: this.x, y: this.y });
+                if (this.trail.length > 50) this.trail.shift();
+
+                // Wrap around edges
+                if (this.x < -this.radius) this.x = width + this.radius;
+                if (this.x > width + this.radius) this.x = -this.radius;
+                if (this.y < -this.radius) this.y = height + this.radius;
+                if (this.y > height + this.radius) this.y = -this.radius;
+            }
+
+            draw() {
+                // Draw trail
+                ctx.strokeStyle = `hsla(${this.hue}, 40%, 50%, 0.1)`;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                for (let i = 0; i < this.trail.length; i++) {
+                    const p = this.trail[i];
+                    if (i === 0) ctx.moveTo(p.x, p.y);
+                    else ctx.lineTo(p.x, p.y);
+                }
+                ctx.stroke();
+
+                // Draw glow
+                const gradient = ctx.createRadialGradient(
+                    this.x, this.y, 0,
+                    this.x, this.y, this.radius * 3
+                );
+                gradient.addColorStop(0, `hsla(${this.hue}, 40%, 50%, 0.3)`);
+                gradient.addColorStop(1, 'transparent');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius * 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw body
+                ctx.fillStyle = `hsla(${this.hue}, 40%, 50%, 0.8)`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        function draw() {
+            // Clear with fade
+            ctx.fillStyle = 'rgba(10, 10, 11, 0.1)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Update and draw bodies
+            for (let body of bodies) {
+                body.update();
+                body.draw();
+            }
+
+            countEl.textContent = bodies.length;
+
+            requestAnimationFrame(draw);
+        }
+
+        canvas.addEventListener('click', (e) => {
+            bodies.push(new Body(e.clientX, e.clientY));
+        });
+
+        // Start with a central massive body
+        resize();
+        bodies.push(new Body(width / 2, height / 2, 200));
+
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

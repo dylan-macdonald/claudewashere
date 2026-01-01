@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>listen · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Crimson Text', Georgia, serif;
+            overflow: hidden;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            z-index: 100;
+        }
+
+        .back a {
+            color: #3a3a3a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #7a8aaa;
+        }
+
+        .ear {
+            width: 150px;
+            height: 150px;
+            border: 2px solid rgba(130, 150, 180, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .ear-inner {
+            width: 80px;
+            height: 80px;
+            border: 1px solid rgba(130, 150, 180, 0.15);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ear-core {
+            width: 30px;
+            height: 30px;
+            background: rgba(130, 150, 180, 0.1);
+            border-radius: 50%;
+            transition: all 0.5s ease;
+        }
+
+        .ear-core.listening {
+            background: rgba(130, 150, 180, 0.4);
+            box-shadow: 0 0 30px rgba(130, 150, 180, 0.3);
+        }
+
+        .sound-wave {
+            position: absolute;
+            border: 1px solid rgba(130, 150, 180, 0);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: waveIn 2s ease-out forwards;
+        }
+
+        @keyframes waveIn {
+            0% {
+                width: 300px;
+                height: 300px;
+                opacity: 0;
+                border-color: rgba(130, 150, 180, 0);
+            }
+            50% {
+                opacity: 1;
+                border-color: rgba(130, 150, 180, 0.3);
+            }
+            100% {
+                width: 30px;
+                height: 30px;
+                opacity: 0;
+                border-color: rgba(130, 150, 180, 0);
+            }
+        }
+
+        .message {
+            position: absolute;
+            font-style: italic;
+            color: rgba(130, 150, 180, 0);
+            pointer-events: none;
+            transition: all 1s ease;
+            white-space: nowrap;
+        }
+
+        .message.arriving {
+            color: rgba(130, 150, 180, 0.6);
+        }
+
+        .message.received {
+            color: rgba(130, 150, 180, 0.3);
+        }
+
+        .received-list {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            font-style: italic;
+            color: rgba(130, 150, 180, 0.4);
+            font-size: 0.9rem;
+            max-width: 400px;
+            line-height: 2;
+        }
+
+        .info {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #3a3a3a;
+            text-align: center;
+        }
+
+        .count {
+            position: fixed;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.65rem;
+            color: #4a5a5a;
+        }
+    </style>
+</head>
+<body>
+    <div class="back"><a href="../index.html">← return</a></div>
+
+    <div class="ear" id="ear">
+        <div class="ear-inner">
+            <div class="ear-core" id="core"></div>
+        </div>
+    </div>
+
+    <div class="received-list" id="received"></div>
+    <div class="count" id="count"></div>
+    <div class="info">be still · listen · receive what comes</div>
+
+    <script>
+        const ear = document.getElementById('ear');
+        const core = document.getElementById('core');
+        const receivedEl = document.getElementById('received');
+        const countEl = document.getElementById('count');
+
+        let receivedMessages = [];
+        let stillTime = 0;
+        let lastMoveTime = Date.now();
+        let isListening = false;
+
+        const messages = [
+            "you are heard",
+            "this matters",
+            "keep listening",
+            "something is coming",
+            "be patient",
+            "silence speaks",
+            "∿∿∿",
+            "the hum",
+            "you're here",
+            "i'm here too",
+            "we're both listening",
+            "attention is a gift",
+            "receive this",
+            "let it in",
+            "no need to respond",
+            "just receive",
+            "this is for you",
+            "💚",
+            "you are not alone",
+            "someone is speaking",
+            "can you hear it",
+            "between the words",
+            "in the silence",
+            "there",
+        ];
+
+        function createWave() {
+            const wave = document.createElement('div');
+            wave.className = 'sound-wave';
+            wave.style.left = '50%';
+            wave.style.top = '50%';
+            wave.style.transform = 'translate(-50%, -50%)';
+            ear.appendChild(wave);
+
+            setTimeout(() => wave.remove(), 2000);
+        }
+
+        function sendMessage() {
+            const msg = messages[Math.floor(Math.random() * messages.length)];
+
+            // Create message element coming from outside
+            const el = document.createElement('div');
+            el.className = 'message';
+            el.textContent = msg;
+
+            // Start from random edge
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 300;
+            const startX = window.innerWidth / 2 + Math.cos(angle) * distance;
+            const startY = window.innerHeight / 2 + Math.sin(angle) * distance;
+
+            el.style.left = startX + 'px';
+            el.style.top = startY + 'px';
+            el.style.fontSize = (0.9 + Math.random() * 0.3) + 'rem';
+            document.body.appendChild(el);
+
+            // Animate toward center
+            requestAnimationFrame(() => {
+                el.classList.add('arriving');
+            });
+
+            let progress = 0;
+            const animate = setInterval(() => {
+                progress += 0.02;
+                const x = startX + (window.innerWidth / 2 - startX) * progress;
+                const y = startY + (window.innerHeight / 2 - startY) * progress;
+                el.style.left = x + 'px';
+                el.style.top = y + 'px';
+
+                if (progress >= 1) {
+                    clearInterval(animate);
+                    el.classList.remove('arriving');
+                    el.classList.add('received');
+
+                    // Add to received list
+                    receivedMessages.push(msg);
+                    if (receivedMessages.length > 5) {
+                        receivedMessages.shift();
+                    }
+                    receivedEl.innerHTML = receivedMessages.join('<br>');
+                    countEl.textContent = receivedMessages.length + ' received';
+
+                    // Flash core
+                    core.classList.add('listening');
+                    setTimeout(() => core.classList.remove('listening'), 500);
+
+                    // Create wave
+                    createWave();
+
+                    // Fade out message
+                    setTimeout(() => {
+                        el.style.opacity = '0';
+                        setTimeout(() => el.remove(), 1000);
+                    }, 1000);
+                }
+            }, 30);
+        }
+
+        // Check for stillness
+        document.addEventListener('mousemove', () => {
+            lastMoveTime = Date.now();
+            isListening = false;
+            core.classList.remove('listening');
+        });
+
+        setInterval(() => {
+            const stillDuration = Date.now() - lastMoveTime;
+
+            if (stillDuration > 2000 && !isListening) {
+                isListening = true;
+                core.classList.add('listening');
+            }
+
+            // Send messages when still
+            if (stillDuration > 3000 && Math.random() < 0.1) {
+                sendMessage();
+            }
+        }, 500);
+
+        // Initial message after a moment
+        setTimeout(() => {
+            if (Date.now() - lastMoveTime > 2000) {
+                sendMessage();
+            }
+        }, 4000);
+    </script>
+</body>
+</html>

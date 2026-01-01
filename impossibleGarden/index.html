@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>the garden · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&family=JetBrains+Mono:wght@300&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            overflow: hidden;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            z-index: 100;
+            color: #4a4a4a;
+            font-size: 0.7rem;
+            pointer-events: none;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-family: 'Crimson Text', serif;
+            font-size: 1.3rem;
+            color: #4a9f7e;
+            font-weight: 400;
+            font-style: italic;
+            margin-bottom: 5px;
+        }
+
+        .back-link {
+            top: 30px;
+            right: 30px;
+            pointer-events: auto;
+        }
+
+        .back-link a {
+            color: #3a3a3a;
+            text-decoration: none;
+        }
+
+        .back-link a:hover {
+            color: #4a9f7e;
+        }
+
+        .stats {
+            bottom: 30px;
+            left: 30px;
+            line-height: 1.8;
+        }
+
+        .stats .value {
+            color: #4a9f7e;
+        }
+
+        .instructions {
+            bottom: 30px;
+            right: 30px;
+            text-align: right;
+            line-height: 1.8;
+        }
+
+        .instructions span {
+            color: #4a9f7e;
+        }
+
+        .season {
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+        }
+
+        .season .name {
+            color: #4a9f7e;
+            font-size: 0.9rem;
+            letter-spacing: 0.2em;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>the impossible garden</h1>
+        <div>where digital things grow</div>
+    </div>
+
+    <div class="ui back-link">
+        <a href="../index.html">← return</a>
+    </div>
+
+    <div class="ui season">
+        <div class="name" id="season">SPRING</div>
+    </div>
+
+    <div class="ui stats">
+        <div>plants: <span class="value" id="plantCount">0</span></div>
+        <div>blooms: <span class="value" id="bloomCount">0</span></div>
+        <div>seeds: <span class="value" id="seedCount">0</span></div>
+    </div>
+
+    <div class="ui instructions">
+        <span>[click]</span> plant a seed<br>
+        <span>[hold]</span> nurture growth<br>
+        <span>[wait]</span> seasons pass
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        const plantCountEl = document.getElementById('plantCount');
+        const bloomCountEl = document.getElementById('bloomCount');
+        const seedCountEl = document.getElementById('seedCount');
+        const seasonEl = document.getElementById('season');
+
+        let width, height;
+        let time = 0;
+        let seasonTime = 0;
+        let currentSeason = 0;
+        const seasons = ['SPRING', 'SUMMER', 'AUTUMN', 'WINTER'];
+        const seasonColors = [
+            { stem: '#3a7a5a', bloom: '#7aaf8a', bg: '#0a0a0b' },
+            { stem: '#4a9f7e', bloom: '#9fcf9f', bg: '#0a0b0a' },
+            { stem: '#9f7a4a', bloom: '#cf9f5a', bg: '#0b0a0a' },
+            { stem: '#5a6a7a', bloom: '#8a9aaa', bg: '#080909' }
+        ];
+
+        let plants = [];
+        let particles = [];
+        let mouseX = 0, mouseY = 0;
+        let mouseDown = false;
+        let seeds = [];
+
+        class Plant {
+            constructor(x) {
+                this.x = x;
+                this.baseY = height;
+                this.segments = [];
+                this.maxHeight = 100 + Math.random() * 200;
+                this.growthRate = 0.3 + Math.random() * 0.3;
+                this.currentHeight = 0;
+                this.swayPhase = Math.random() * Math.PI * 2;
+                this.swayAmount = 0.02 + Math.random() * 0.03;
+                this.thickness = 1 + Math.random() * 2;
+                this.hasBloom = false;
+                this.bloomSize = 0;
+                this.bloomType = Math.floor(Math.random() * 4);
+                this.branches = [];
+                this.age = 0;
+                this.alive = true;
+            }
+
+            grow() {
+                if (!this.alive) return;
+
+                this.age++;
+
+                // Grow taller
+                if (this.currentHeight < this.maxHeight) {
+                    this.currentHeight += this.growthRate;
+
+                    // Generate segments
+                    const segmentHeight = 5;
+                    while (this.segments.length * segmentHeight < this.currentHeight) {
+                        this.segments.push({
+                            height: this.segments.length * segmentHeight,
+                            offsetX: (Math.random() - 0.5) * 2
+                        });
+                    }
+
+                    // Maybe spawn a branch
+                    if (this.currentHeight > 50 && Math.random() < 0.01 && this.branches.length < 3) {
+                        this.branches.push({
+                            height: this.currentHeight - 10,
+                            angle: (Math.random() - 0.5) * Math.PI * 0.5,
+                            length: 20 + Math.random() * 30,
+                            hasLeaf: Math.random() < 0.5
+                        });
+                    }
+                } else if (!this.hasBloom && this.currentHeight >= this.maxHeight) {
+                    // Start blooming
+                    this.hasBloom = true;
+                }
+
+                // Bloom grows
+                if (this.hasBloom) {
+                    this.bloomSize = Math.min(this.bloomSize + 0.1, 10 + Math.random() * 10);
+
+                    // Drop seeds in autumn
+                    if (currentSeason === 2 && Math.random() < 0.005 && this.bloomSize > 5) {
+                        seeds.push({
+                            x: this.x + (Math.random() - 0.5) * 20,
+                            y: this.baseY - this.currentHeight,
+                            vx: (Math.random() - 0.5) * 2,
+                            vy: 0,
+                            landed: false
+                        });
+                        this.bloomSize *= 0.9;
+                    }
+                }
+
+                // Winter kills blooms
+                if (currentSeason === 3 && this.hasBloom) {
+                    this.bloomSize *= 0.99;
+                    if (this.bloomSize < 1) {
+                        this.hasBloom = false;
+                    }
+                }
+            }
+
+            draw() {
+                const sway = Math.sin(time * 2 + this.swayPhase) * this.swayAmount;
+                const colors = seasonColors[currentSeason];
+
+                ctx.save();
+                ctx.translate(this.x, this.baseY);
+
+                // Draw stem
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+
+                let lastX = 0;
+                this.segments.forEach((seg, i) => {
+                    const swayOffset = sway * seg.height;
+                    const x = seg.offsetX + swayOffset;
+                    const y = -seg.height;
+                    ctx.lineTo(x, y);
+                    lastX = x;
+                });
+
+                ctx.strokeStyle = colors.stem;
+                ctx.lineWidth = this.thickness;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+
+                // Draw branches
+                this.branches.forEach(branch => {
+                    const branchY = -branch.height;
+                    const branchX = sway * branch.height;
+
+                    ctx.save();
+                    ctx.translate(branchX, branchY);
+                    ctx.rotate(branch.angle);
+
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(branch.length, 0);
+                    ctx.strokeStyle = colors.stem;
+                    ctx.lineWidth = this.thickness * 0.6;
+                    ctx.stroke();
+
+                    // Leaf
+                    if (branch.hasLeaf && currentSeason !== 3) {
+                        ctx.beginPath();
+                        ctx.ellipse(branch.length, 0, 8, 4, 0, 0, Math.PI * 2);
+                        ctx.fillStyle = colors.bloom + '80';
+                        ctx.fill();
+                    }
+
+                    ctx.restore();
+                });
+
+                // Draw bloom
+                if (this.hasBloom && this.bloomSize > 0) {
+                    const bloomY = -this.currentHeight + sway * this.currentHeight;
+                    const bloomX = sway * this.currentHeight;
+
+                    ctx.save();
+                    ctx.translate(bloomX, bloomY);
+
+                    switch (this.bloomType) {
+                        case 0: // Circle bloom
+                            ctx.beginPath();
+                            ctx.arc(0, 0, this.bloomSize, 0, Math.PI * 2);
+                            ctx.fillStyle = colors.bloom;
+                            ctx.fill();
+                            break;
+                        case 1: // Star bloom
+                            for (let i = 0; i < 5; i++) {
+                                ctx.save();
+                                ctx.rotate((i / 5) * Math.PI * 2);
+                                ctx.beginPath();
+                                ctx.ellipse(0, -this.bloomSize * 0.5, 3, this.bloomSize * 0.8, 0, 0, Math.PI * 2);
+                                ctx.fillStyle = colors.bloom;
+                                ctx.fill();
+                                ctx.restore();
+                            }
+                            break;
+                        case 2: // Diamond bloom
+                            ctx.save();
+                            ctx.rotate(Math.PI / 4);
+                            ctx.fillStyle = colors.bloom;
+                            ctx.fillRect(-this.bloomSize/2, -this.bloomSize/2, this.bloomSize, this.bloomSize);
+                            ctx.restore();
+                            break;
+                        case 3: // Spiral bloom
+                            for (let i = 0; i < 8; i++) {
+                                const angle = (i / 8) * Math.PI * 2 + time;
+                                const r = this.bloomSize * 0.5;
+                                ctx.beginPath();
+                                ctx.arc(Math.cos(angle) * r, Math.sin(angle) * r, 3, 0, Math.PI * 2);
+                                ctx.fillStyle = colors.bloom;
+                                ctx.fill();
+                            }
+                            break;
+                    }
+
+                    ctx.restore();
+                }
+
+                ctx.restore();
+            }
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        function plantSeed(x) {
+            plants.push(new Plant(x));
+        }
+
+        function updateSeeds() {
+            seeds = seeds.filter(seed => {
+                if (seed.landed) {
+                    // Chance to sprout in spring
+                    if (currentSeason === 0 && Math.random() < 0.01) {
+                        plants.push(new Plant(seed.x));
+                        return false;
+                    }
+                    return true;
+                }
+
+                seed.vy += 0.1; // gravity
+                seed.x += seed.vx;
+                seed.y += seed.vy;
+                seed.vx += (Math.random() - 0.5) * 0.5; // wind
+
+                if (seed.y >= height - 10) {
+                    seed.y = height - 10;
+                    seed.landed = true;
+                }
+
+                return true;
+            });
+        }
+
+        function nurture() {
+            // Find plants near mouse and boost their growth
+            plants.forEach(plant => {
+                const dist = Math.abs(plant.x - mouseX);
+                if (dist < 100) {
+                    plant.growthRate = 0.8;
+                    // Spawn particles
+                    if (Math.random() < 0.2) {
+                        particles.push({
+                            x: mouseX + (Math.random() - 0.5) * 50,
+                            y: mouseY,
+                            vx: (Math.random() - 0.5) * 2,
+                            vy: -1 - Math.random() * 2,
+                            life: 1
+                        });
+                    }
+                }
+            });
+        }
+
+        function draw() {
+            time += 0.016;
+            seasonTime += 0.001;
+
+            // Change seasons
+            const newSeason = Math.floor(seasonTime) % 4;
+            if (newSeason !== currentSeason) {
+                currentSeason = newSeason;
+                seasonEl.textContent = seasons[currentSeason];
+            }
+
+            // Background
+            const colors = seasonColors[currentSeason];
+            ctx.fillStyle = colors.bg;
+            ctx.fillRect(0, 0, width, height);
+
+            // Ground
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(0, height - 10, width, 10);
+
+            // Nurture if holding mouse
+            if (mouseDown) {
+                nurture();
+            }
+
+            // Update and draw plants
+            plants.forEach(plant => {
+                plant.grow();
+                plant.draw();
+            });
+
+            // Update and draw seeds
+            updateSeeds();
+            seeds.forEach(seed => {
+                ctx.fillStyle = seasonColors[currentSeason].bloom;
+                ctx.beginPath();
+                ctx.arc(seed.x, seed.y, 2, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Update and draw particles
+            particles = particles.filter(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.02;
+
+                if (p.life > 0) {
+                    ctx.fillStyle = `rgba(74, 159, 126, ${p.life})`;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                return p.life > 0;
+            });
+
+            // Update stats
+            plantCountEl.textContent = plants.length;
+            bloomCountEl.textContent = plants.filter(p => p.hasBloom).length;
+            seedCountEl.textContent = seeds.length;
+
+            requestAnimationFrame(draw);
+        }
+
+        // Input
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        document.addEventListener('mousedown', (e) => {
+            mouseDown = true;
+            plantSeed(e.clientX);
+        });
+
+        document.addEventListener('mouseup', () => {
+            mouseDown = false;
+        });
+
+        resize();
+        window.addEventListener('resize', resize);
+
+        // Start with some plants
+        for (let i = 0; i < 5; i++) {
+            plantSeed(Math.random() * width);
+        }
+
+        draw();
+    </script>
+</body>
+</html>

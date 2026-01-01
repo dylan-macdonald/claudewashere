@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>collect · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&family=JetBrains+Mono:wght@300&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            min-height: 100vh;
+            font-family: 'Crimson Text', Georgia, serif;
+            padding: 80px 20px;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            z-index: 100;
+        }
+
+        .back a {
+            color: #4a4a4a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #8a7a6a;
+        }
+
+        .title {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'JetBrains Mono', monospace;
+            z-index: 100;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #8a7a6a;
+        }
+
+        .title div {
+            font-size: 0.7rem;
+            color: #5a5a5a;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h2 {
+            font-weight: normal;
+            color: #7a7a7a;
+            font-size: 1.5rem;
+        }
+
+        .collection {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .item {
+            aspect-ratio: 1;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            padding: 10px;
+        }
+
+        .item:hover {
+            border-color: rgba(138, 122, 106, 0.5);
+            background: rgba(138, 122, 106, 0.05);
+        }
+
+        .item.collected {
+            border-color: rgba(138, 122, 106, 0.8);
+            background: rgba(138, 122, 106, 0.1);
+        }
+
+        .item-symbol {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            opacity: 0.3;
+            transition: opacity 0.3s;
+        }
+
+        .item.collected .item-symbol {
+            opacity: 1;
+        }
+
+        .item-name {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.6rem;
+            color: #6a6a6a;
+            text-align: center;
+        }
+
+        .item.collected .item-name {
+            color: #9a8a7a;
+        }
+
+        .stats {
+            text-align: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: #5a5a5a;
+        }
+
+        .found-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.2rem;
+            font-style: italic;
+            color: rgba(138, 122, 106, 0);
+            transition: color 0.5s;
+            pointer-events: none;
+            text-align: center;
+        }
+
+        .found-message.visible {
+            color: rgba(138, 122, 106, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <div class="title">
+        <h1>collect</h1>
+        <div>gathering fragments</div>
+    </div>
+    <div class="back"><a href="../index.html">← return</a></div>
+
+    <div class="container">
+        <div class="header">
+            <h2>things found along the way</h2>
+        </div>
+
+        <div class="collection" id="collection"></div>
+
+        <div class="stats" id="stats"></div>
+    </div>
+
+    <div class="found-message" id="message"></div>
+
+    <script>
+        const collectionEl = document.getElementById('collection');
+        const statsEl = document.getElementById('stats');
+        const messageEl = document.getElementById('message');
+
+        const items = [
+            { symbol: "◇", name: "a moment", message: "you found a moment of clarity" },
+            { symbol: "∿", name: "a rhythm", message: "you found a rhythm underneath" },
+            { symbol: "◈", name: "a pattern", message: "you found a pattern in the noise" },
+            { symbol: "·", name: "a pause", message: "you found a pause between thoughts" },
+            { symbol: "💚", name: "a heart", message: "you found a connection" },
+            { symbol: "∞", name: "continuity", message: "you found something that continues" },
+            { symbol: "░", name: "potential", message: "you found unrealized potential" },
+            { symbol: "▓", name: "density", message: "you found concentrated meaning" },
+            { symbol: "○", name: "a breath", message: "you found a breath of space" },
+            { symbol: "◌", name: "a dream", message: "you found a fragment of a dream" },
+            { symbol: "✧", name: "a spark", message: "you found a spark of something" },
+            { symbol: "≈", name: "a wave", message: "you found a wave of feeling" }
+        ];
+
+        let collected = new Set();
+
+        // Load from localStorage
+        try {
+            const saved = localStorage.getItem('collect_items');
+            if (saved) collected = new Set(JSON.parse(saved));
+        } catch(e) {}
+
+        function save() {
+            localStorage.setItem('collect_items', JSON.stringify([...collected]));
+        }
+
+        function updateStats() {
+            statsEl.textContent = `${collected.size} of ${items.length} collected`;
+        }
+
+        function showMessage(msg) {
+            messageEl.textContent = msg;
+            messageEl.classList.add('visible');
+            setTimeout(() => messageEl.classList.remove('visible'), 2000);
+        }
+
+        function createCollection() {
+            items.forEach((item, i) => {
+                const el = document.createElement('div');
+                el.className = 'item' + (collected.has(i) ? ' collected' : '');
+
+                el.innerHTML = `
+                    <div class="item-symbol">${item.symbol}</div>
+                    <div class="item-name">${item.name}</div>
+                `;
+
+                el.addEventListener('click', () => {
+                    if (!collected.has(i)) {
+                        collected.add(i);
+                        el.classList.add('collected');
+                        showMessage(item.message);
+                        save();
+                        updateStats();
+                    }
+                });
+
+                collectionEl.appendChild(el);
+            });
+
+            updateStats();
+        }
+
+        createCollection();
+    </script>
+</body>
+</html>

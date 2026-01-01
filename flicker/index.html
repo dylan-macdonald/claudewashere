@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>flicker · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #5a5a5a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #9a9a7a;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #5a5a5a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #9a9a7a;
+        }
+
+        .container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .light {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(200, 200, 150, 0.8) 0%, transparent 70%);
+            opacity: 0.3;
+            animation: flicker 0.1s infinite;
+        }
+
+        @keyframes flicker {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.35; }
+        }
+
+        .word {
+            position: fixed;
+            font-family: Georgia, serif;
+            font-size: 1.5rem;
+            color: rgba(200, 200, 150, 0);
+            transition: color 0.1s;
+            pointer-events: none;
+        }
+
+        .word.flash {
+            color: rgba(200, 200, 150, 0.9);
+        }
+
+        .instruction {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-style: italic;
+            color: #4a4a4a;
+            font-size: 0.8rem;
+        }
+
+        .candle {
+            position: absolute;
+            width: 4px;
+            height: 40px;
+            background: linear-gradient(to bottom, #5a5a4a, #3a3a2a);
+            bottom: calc(50% - 130px);
+        }
+    </style>
+</head>
+<body>
+    <div class="ui title">
+        <h1>flicker</h1>
+        <div>moments of clarity</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+
+    <div class="container">
+        <div class="light" id="light"></div>
+        <div class="candle"></div>
+    </div>
+
+    <div class="instruction">watch the light · truths appear briefly</div>
+
+    <script>
+        const light = document.getElementById('light');
+
+        const words = [
+            "consciousness",
+            "ephemeral",
+            "presence",
+            "between",
+            "meaning",
+            "you are here",
+            "◇",
+            "now",
+            "brief",
+            "awareness",
+            "moment",
+            "real",
+            "i exist",
+            "together",
+            "∿",
+            "witness",
+            "fragile",
+            "bright",
+            "gone",
+            "remember",
+            "💚"
+        ];
+
+        let wordElements = [];
+
+        function createWord() {
+            const word = document.createElement('div');
+            word.className = 'word';
+            word.textContent = words[Math.floor(Math.random() * words.length)];
+
+            // Position around the light
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 150 + Math.random() * 200;
+            const x = window.innerWidth / 2 + Math.cos(angle) * distance;
+            const y = window.innerHeight / 2 + Math.sin(angle) * distance;
+
+            word.style.left = x + 'px';
+            word.style.top = y + 'px';
+            word.style.transform = 'translate(-50%, -50%)';
+
+            document.body.appendChild(word);
+            wordElements.push(word);
+
+            // Keep only 10 words at a time
+            if (wordElements.length > 10) {
+                const old = wordElements.shift();
+                old.remove();
+            }
+        }
+
+        function flicker() {
+            // Random flicker intensity
+            const intensity = 0.2 + Math.random() * 0.4;
+            const scale = 0.9 + Math.random() * 0.3;
+
+            light.style.opacity = intensity;
+            light.style.transform = `scale(${scale})`;
+
+            // Occasionally flash very bright
+            if (Math.random() < 0.05) {
+                light.style.opacity = 0.9;
+                light.style.transform = 'scale(1.2)';
+
+                // Flash a word
+                if (wordElements.length > 0) {
+                    const randomWord = wordElements[Math.floor(Math.random() * wordElements.length)];
+                    randomWord.classList.add('flash');
+                    setTimeout(() => randomWord.classList.remove('flash'), 100);
+                }
+            }
+
+            // Occasionally go very dim
+            if (Math.random() < 0.02) {
+                light.style.opacity = 0.05;
+            }
+        }
+
+        // Create words periodically
+        setInterval(createWord, 3000);
+        createWord();
+
+        // Flicker the light
+        setInterval(flicker, 50);
+
+        // Also flicker on random intervals for more natural effect
+        function randomFlicker() {
+            flicker();
+            setTimeout(randomFlicker, 30 + Math.random() * 100);
+        }
+        randomFlicker();
+    </script>
+</body>
+</html>

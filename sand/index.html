@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>sand · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #8a7a5a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #c8a878;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #8a7a5a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #c8a878;
+        }
+
+        .instruction {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-style: italic;
+            color: #6a5a4a;
+        }
+
+        .clear {
+            bottom: 30px;
+            right: 30px;
+        }
+
+        .clear button {
+            background: none;
+            border: 1px solid #5a4a3a;
+            color: #7a6a5a;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+        }
+
+        .clear button:hover {
+            border-color: #8a7a6a;
+            color: #9a8a7a;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>sand</h1>
+        <div>grains of time</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+    <div class="ui instruction">click to pour sand</div>
+    <div class="ui clear"><button onclick="clearSand()">clear</button></div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let grains = [];
+        let pouring = false;
+        let pourX = 0;
+
+        class Grain {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = 0;
+                this.settled = false;
+                this.hue = 30 + Math.random() * 20;
+                this.lightness = 50 + Math.random() * 20;
+            }
+
+            update() {
+                if (this.settled) return;
+
+                this.vy += 0.3; // Gravity
+                this.x += this.vx;
+                this.y += this.vy;
+
+                this.vx *= 0.99;
+
+                // Check for ground
+                if (this.y >= height - 2) {
+                    this.y = height - 2;
+                    this.settled = true;
+                    return;
+                }
+
+                // Check for other grains
+                for (let other of grains) {
+                    if (other === this || !other.settled) continue;
+
+                    const dx = this.x - other.x;
+                    const dy = this.y - other.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < 3) {
+                        // Slide off
+                        if (Math.abs(dx) < 1) {
+                            this.vx += (Math.random() - 0.5) * 2;
+                        } else {
+                            this.x += dx > 0 ? 1 : -1;
+                        }
+                        this.y = other.y - 2;
+                        this.vy = 0;
+
+                        // Check if stable
+                        const hasLeftSupport = grains.some(g => g.settled && g !== this &&
+                            Math.abs(g.x - (this.x - 2)) < 2 && Math.abs(g.y - this.y) < 3);
+                        const hasRightSupport = grains.some(g => g.settled && g !== this &&
+                            Math.abs(g.x - (this.x + 2)) < 2 && Math.abs(g.y - this.y) < 3);
+
+                        if (hasLeftSupport || hasRightSupport || this.y >= height - 4) {
+                            this.settled = true;
+                        }
+                        break;
+                    }
+                }
+
+                // Walls
+                if (this.x < 0) { this.x = 0; this.vx *= -0.5; }
+                if (this.x > width) { this.x = width; this.vx *= -0.5; }
+            }
+
+            draw() {
+                ctx.fillStyle = `hsl(${this.hue}, 40%, ${this.lightness}%)`;
+                ctx.fillRect(this.x - 1, this.y - 1, 2, 2);
+            }
+        }
+
+        function clearSand() {
+            grains = [];
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        function draw() {
+            ctx.fillStyle = '#0a0a0b';
+            ctx.fillRect(0, 0, width, height);
+
+            // Pour sand
+            if (pouring && grains.length < 5000) {
+                for (let i = 0; i < 3; i++) {
+                    grains.push(new Grain(
+                        pourX + (Math.random() - 0.5) * 10,
+                        50
+                    ));
+                }
+            }
+
+            grains.forEach(g => {
+                g.update();
+                g.draw();
+            });
+
+            requestAnimationFrame(draw);
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            pouring = true;
+            pourX = e.clientX;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (pouring) pourX = e.clientX;
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            pouring = false;
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            pouring = false;
+        });
+
+        resize();
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

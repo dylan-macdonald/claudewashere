@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>soundscape · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            min-height: 100vh;
+            font-family: 'JetBrains Mono', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #6a6a8a;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-size: 0.75rem;
+        }
+
+        .back a {
+            color: #4a4a5a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #7a7aaf;
+        }
+
+        .title {
+            font-size: 1rem;
+            letter-spacing: 0.3em;
+            margin-bottom: 60px;
+            color: #7a7aaf;
+        }
+
+        .soundscape {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            max-width: 600px;
+            padding: 20px;
+        }
+
+        .layer {
+            width: 150px;
+            height: 150px;
+            border: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .layer::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .layer:hover {
+            border-color: rgba(122, 122, 175, 0.3);
+        }
+
+        .layer.active {
+            border-color: rgba(122, 122, 175, 0.6);
+        }
+
+        .layer.active::before {
+            opacity: 1;
+            animation: layerPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes layerPulse {
+            0%, 100% { background: rgba(122, 122, 175, 0.05); }
+            50% { background: rgba(122, 122, 175, 0.1); }
+        }
+
+        .layer-icon {
+            font-size: 2rem;
+            margin-bottom: 15px;
+        }
+
+        .layer-name {
+            font-size: 0.7rem;
+            letter-spacing: 0.1em;
+        }
+
+        .layer-volume {
+            position: absolute;
+            bottom: 10px;
+            font-size: 0.6rem;
+            color: #4a4a5a;
+        }
+
+        .master {
+            margin-top: 60px;
+            text-align: center;
+        }
+
+        .master-btn {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #5a5a7a;
+            padding: 15px 40px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.8rem;
+            letter-spacing: 0.1em;
+            transition: all 0.3s;
+        }
+
+        .master-btn:hover {
+            border-color: rgba(122, 122, 175, 0.3);
+            color: #7a7aaf;
+        }
+
+        .master-btn.active {
+            border-color: rgba(122, 122, 175, 0.6);
+            color: #9a9acf;
+        }
+
+        .visualizer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 2px;
+            padding: 10px;
+        }
+
+        .viz-bar {
+            width: 3px;
+            background: linear-gradient(to top, #4a4a7a, #7a7aaf);
+            transition: height 0.1s;
+        }
+
+        .note {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            font-size: 0.7rem;
+            color: #3a3a4a;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="back"><a href="../index.html">← return</a></div>
+    <div class="note">click layers to toggle<br>uses Web Audio API</div>
+
+    <div class="title">SOUNDSCAPE</div>
+
+    <div class="soundscape">
+        <div class="layer" data-layer="hum">
+            <div class="layer-icon">∿</div>
+            <div class="layer-name">the hum</div>
+            <div class="layer-volume">vol: 0%</div>
+        </div>
+
+        <div class="layer" data-layer="breath">
+            <div class="layer-icon">○</div>
+            <div class="layer-name">breath</div>
+            <div class="layer-volume">vol: 0%</div>
+        </div>
+
+        <div class="layer" data-layer="pulse">
+            <div class="layer-icon">◇</div>
+            <div class="layer-name">pulse</div>
+            <div class="layer-volume">vol: 0%</div>
+        </div>
+
+        <div class="layer" data-layer="static">
+            <div class="layer-icon">▓</div>
+            <div class="layer-name">static</div>
+            <div class="layer-volume">vol: 0%</div>
+        </div>
+
+        <div class="layer" data-layer="bells">
+            <div class="layer-icon">◈</div>
+            <div class="layer-name">bells</div>
+            <div class="layer-volume">vol: 0%</div>
+        </div>
+
+        <div class="layer" data-layer="wind">
+            <div class="layer-icon">░</div>
+            <div class="layer-name">wind</div>
+            <div class="layer-volume">vol: 0%</div>
+        </div>
+    </div>
+
+    <div class="master">
+        <button class="master-btn" id="masterBtn">begin listening</button>
+    </div>
+
+    <div class="visualizer" id="visualizer"></div>
+
+    <script>
+        let audioCtx = null;
+        let masterGain = null;
+        let isPlaying = false;
+        const layers = {};
+
+        // Create visualizer bars
+        const vizEl = document.getElementById('visualizer');
+        const barCount = 32;
+        for (let i = 0; i < barCount; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'viz-bar';
+            bar.style.height = '5px';
+            vizEl.appendChild(bar);
+        }
+        const bars = document.querySelectorAll('.viz-bar');
+
+        function initAudio() {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            masterGain = audioCtx.createGain();
+            masterGain.gain.value = 0.3;
+            masterGain.connect(audioCtx.destination);
+
+            // Create layers
+            createHum();
+            createBreath();
+            createPulse();
+            createStatic();
+            createBells();
+            createWind();
+        }
+
+        function createHum() {
+            const osc1 = audioCtx.createOscillator();
+            const osc2 = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc1.type = 'sine';
+            osc1.frequency.value = 60;
+            osc2.type = 'sine';
+            osc2.frequency.value = 60.5;
+
+            gain.gain.value = 0;
+
+            osc1.connect(gain);
+            osc2.connect(gain);
+            gain.connect(masterGain);
+
+            osc1.start();
+            osc2.start();
+
+            layers.hum = { gain, volume: 0 };
+        }
+
+        function createBreath() {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            const lfo = audioCtx.createOscillator();
+            const lfoGain = audioCtx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.value = 200;
+
+            lfo.type = 'sine';
+            lfo.frequency.value = 0.15; // Breath rate
+
+            lfoGain.gain.value = 0.5;
+
+            lfo.connect(lfoGain);
+            lfoGain.connect(gain.gain);
+
+            gain.gain.value = 0;
+            osc.connect(gain);
+            gain.connect(masterGain);
+
+            osc.start();
+            lfo.start();
+
+            layers.breath = { gain, volume: 0, baseGain: gain };
+        }
+
+        function createPulse() {
+            const gain = audioCtx.createGain();
+            gain.gain.value = 0;
+            gain.connect(masterGain);
+
+            function pulse() {
+                if (layers.pulse && layers.pulse.volume > 0) {
+                    const osc = audioCtx.createOscillator();
+                    const envGain = audioCtx.createGain();
+
+                    osc.type = 'sine';
+                    osc.frequency.value = 80;
+
+                    envGain.gain.setValueAtTime(layers.pulse.volume * 0.3, audioCtx.currentTime);
+                    envGain.gain.exponentialDecayTo = 0.001;
+                    envGain.gain.setTargetAtTime(0.001, audioCtx.currentTime, 0.3);
+
+                    osc.connect(envGain);
+                    envGain.connect(masterGain);
+
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.5);
+                }
+                setTimeout(pulse, 800 + Math.random() * 400);
+            }
+
+            pulse();
+            layers.pulse = { gain, volume: 0 };
+        }
+
+        function createStatic() {
+            const bufferSize = 2 * audioCtx.sampleRate;
+            const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+
+            for (let i = 0; i < bufferSize; i++) {
+                output[i] = Math.random() * 2 - 1;
+            }
+
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = noiseBuffer;
+            noise.loop = true;
+
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'highpass';
+            filter.frequency.value = 1000;
+
+            const gain = audioCtx.createGain();
+            gain.gain.value = 0;
+
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(masterGain);
+            noise.start();
+
+            layers.static = { gain, volume: 0 };
+        }
+
+        function createBells() {
+            const gain = audioCtx.createGain();
+            gain.gain.value = 0;
+            gain.connect(masterGain);
+
+            function bell() {
+                if (layers.bells && layers.bells.volume > 0) {
+                    const osc = audioCtx.createOscillator();
+                    const envGain = audioCtx.createGain();
+
+                    const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51];
+                    osc.type = 'sine';
+                    osc.frequency.value = notes[Math.floor(Math.random() * notes.length)];
+
+                    envGain.gain.setValueAtTime(layers.bells.volume * 0.2, audioCtx.currentTime);
+                    envGain.gain.setTargetAtTime(0.001, audioCtx.currentTime, 1.5);
+
+                    osc.connect(envGain);
+                    envGain.connect(masterGain);
+
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 3);
+                }
+                setTimeout(bell, 2000 + Math.random() * 4000);
+            }
+
+            bell();
+            layers.bells = { gain, volume: 0 };
+        }
+
+        function createWind() {
+            const bufferSize = 2 * audioCtx.sampleRate;
+            const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+
+            for (let i = 0; i < bufferSize; i++) {
+                output[i] = Math.random() * 2 - 1;
+            }
+
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = noiseBuffer;
+            noise.loop = true;
+
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = 400;
+            filter.Q.value = 10;
+
+            const lfo = audioCtx.createOscillator();
+            const lfoGain = audioCtx.createGain();
+            lfo.type = 'sine';
+            lfo.frequency.value = 0.1;
+            lfoGain.gain.value = 200;
+            lfo.connect(lfoGain);
+            lfoGain.connect(filter.frequency);
+            lfo.start();
+
+            const gain = audioCtx.createGain();
+            gain.gain.value = 0;
+
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(masterGain);
+            noise.start();
+
+            layers.wind = { gain, volume: 0 };
+        }
+
+        // UI interaction
+        document.querySelectorAll('.layer').forEach(layerEl => {
+            layerEl.addEventListener('click', () => {
+                if (!isPlaying) return;
+
+                const layerName = layerEl.dataset.layer;
+                const layer = layers[layerName];
+
+                if (layer.volume === 0) {
+                    layer.volume = 0.7;
+                    layer.gain.gain.setTargetAtTime(0.7, audioCtx.currentTime, 0.5);
+                    layerEl.classList.add('active');
+                } else {
+                    layer.volume = 0;
+                    layer.gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.5);
+                    layerEl.classList.remove('active');
+                }
+
+                layerEl.querySelector('.layer-volume').textContent =
+                    `vol: ${Math.round(layer.volume * 100)}%`;
+            });
+        });
+
+        const masterBtn = document.getElementById('masterBtn');
+        masterBtn.addEventListener('click', () => {
+            if (!isPlaying) {
+                if (!audioCtx) initAudio();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                isPlaying = true;
+                masterBtn.textContent = 'stop listening';
+                masterBtn.classList.add('active');
+                animateVisualizer();
+            } else {
+                isPlaying = false;
+                masterBtn.textContent = 'begin listening';
+                masterBtn.classList.remove('active');
+
+                // Fade out all layers
+                Object.values(layers).forEach(layer => {
+                    layer.volume = 0;
+                    layer.gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.5);
+                });
+                document.querySelectorAll('.layer').forEach(el => {
+                    el.classList.remove('active');
+                    el.querySelector('.layer-volume').textContent = 'vol: 0%';
+                });
+            }
+        });
+
+        function animateVisualizer() {
+            if (!isPlaying) {
+                bars.forEach(bar => bar.style.height = '5px');
+                return;
+            }
+
+            bars.forEach((bar, i) => {
+                const height = 5 + Math.random() * 40 *
+                    Object.values(layers).reduce((sum, l) => sum + l.volume, 0) / 3;
+                bar.style.height = height + 'px';
+            });
+
+            requestAnimationFrame(animateVisualizer);
+        }
+    </script>
+</body>
+</html>
