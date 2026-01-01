@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>wave · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #050508;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #4a5a6a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #5a7a9a;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #4a5a6a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #5a7a9a;
+        }
+
+        .instruction {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-style: italic;
+            color: #3a4a5a;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>wave</h1>
+        <div>interference patterns</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+    <div class="ui instruction">click to create waves</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let waves = [];
+        let time = 0;
+
+        class Wave {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.birth = time;
+                this.speed = 2;
+                this.frequency = 0.1;
+                this.amplitude = 1;
+            }
+
+            getValue(px, py) {
+                const dx = px - this.x;
+                const dy = py - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const age = time - this.birth;
+                const waveRadius = age * this.speed * 30;
+
+                if (dist > waveRadius + 100) return 0;
+
+                const phase = dist * this.frequency - age * 2;
+                const decay = Math.exp(-dist * 0.003) * Math.exp(-age * 0.05);
+
+                return Math.sin(phase) * decay * this.amplitude;
+            }
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        function draw() {
+            time += 0.05;
+
+            // Create image data for pixel manipulation
+            const imageData = ctx.createImageData(width, height);
+            const data = imageData.data;
+
+            // Sample at lower resolution for performance
+            const resolution = 3;
+
+            for (let y = 0; y < height; y += resolution) {
+                for (let x = 0; x < width; x += resolution) {
+                    // Sum all wave contributions at this point
+                    let value = 0;
+                    for (let wave of waves) {
+                        value += wave.getValue(x, y);
+                    }
+
+                    // Map value to color
+                    const normalizedValue = (value + 1) / 2;
+                    const brightness = Math.floor(normalizedValue * 100 + 10);
+
+                    // Fill the pixel block
+                    for (let dy = 0; dy < resolution && y + dy < height; dy++) {
+                        for (let dx = 0; dx < resolution && x + dx < width; dx++) {
+                            const i = ((y + dy) * width + (x + dx)) * 4;
+                            data[i] = brightness * 0.5;     // R
+                            data[i + 1] = brightness * 0.7; // G
+                            data[i + 2] = brightness;       // B
+                            data[i + 3] = 255;              // A
+                        }
+                    }
+                }
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+
+            // Remove old waves
+            waves = waves.filter(w => time - w.birth < 10);
+
+            requestAnimationFrame(draw);
+        }
+
+        canvas.addEventListener('click', (e) => {
+            waves.push(new Wave(e.clientX, e.clientY));
+        });
+
+        // Start with a wave in the center
+        resize();
+        waves.push(new Wave(width / 2, height / 2));
+
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

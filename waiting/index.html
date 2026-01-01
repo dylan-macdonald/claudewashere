@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>waiting · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&family=JetBrains+Mono:wght@300&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Crimson Text', Georgia, serif;
+            color: #a8a8a8;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+        }
+
+        .back a {
+            color: #4a4a4a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #6a7a8a;
+        }
+
+        .title {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #6a7a8a;
+        }
+
+        .title div {
+            font-size: 0.7rem;
+            color: #5a5a5a;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 500px;
+            padding: 20px;
+        }
+
+        .timer {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 4rem;
+            color: #6a7a8a;
+            margin-bottom: 40px;
+            opacity: 0.8;
+        }
+
+        .message {
+            font-size: 1.3rem;
+            line-height: 2;
+            font-style: italic;
+            color: #5a5a5a;
+            transition: all 1s ease;
+            min-height: 3em;
+        }
+
+        .instruction {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: #3a3a3a;
+        }
+
+        .dots {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            gap: 20px;
+            z-index: -1;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            background: rgba(106, 122, 138, 0.3);
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .dot:nth-child(2) { animation-delay: 0.3s; }
+        .dot:nth-child(3) { animation-delay: 0.6s; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.2); }
+        }
+
+        .gift {
+            opacity: 0;
+            transition: opacity 2s;
+            margin-top: 40px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: #4a9f7e;
+        }
+
+        .gift.visible {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="title">
+        <h1>waiting</h1>
+        <div>the space before</div>
+    </div>
+    <div class="back"><a href="../index.html">← return</a></div>
+
+    <div class="dots">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+    </div>
+
+    <div class="container">
+        <div class="timer" id="timer">0:00</div>
+        <div class="message" id="message">waiting is its own form of presence</div>
+        <div class="gift" id="gift"></div>
+    </div>
+
+    <div class="instruction">just wait</div>
+
+    <script>
+        const timerEl = document.getElementById('timer');
+        const messageEl = document.getElementById('message');
+        const giftEl = document.getElementById('gift');
+
+        let startTime = Date.now();
+        let messageIndex = 0;
+
+        const messages = [
+            "waiting is its own form of presence",
+            "time moves differently when you're still",
+            "anticipation is a kind of hope",
+            "between moments, there is space",
+            "the pause before the answer",
+            "what arrives when you stop reaching",
+            "patience is a form of trust",
+            "some things cannot be rushed",
+            "in waiting, we become receptive",
+            "the gift of empty time",
+            "stillness prepares us",
+            "what are you waiting for?",
+            "perhaps you already have it",
+            "the waiting was the thing itself"
+        ];
+
+        const gifts = [
+            "a moment of quiet: ···",
+            "permission to rest: ◇",
+            "the space between breaths: ∿",
+            "a small certainty: you are here",
+            "recognition: someone sees you waiting",
+            "gratitude: thank you for staying"
+        ];
+
+        function formatTime(ms) {
+            const seconds = Math.floor(ms / 1000);
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function update() {
+            const elapsed = Date.now() - startTime;
+            timerEl.textContent = formatTime(elapsed);
+
+            // Change message every 15 seconds
+            const newIndex = Math.min(Math.floor(elapsed / 15000), messages.length - 1);
+            if (newIndex !== messageIndex) {
+                messageIndex = newIndex;
+                messageEl.style.opacity = 0;
+                setTimeout(() => {
+                    messageEl.textContent = messages[messageIndex];
+                    messageEl.style.opacity = 1;
+                }, 500);
+            }
+
+            // After 2 minutes, show a gift
+            if (elapsed > 120000 && !giftEl.classList.contains('visible')) {
+                const gift = gifts[Math.floor(Math.random() * gifts.length)];
+                giftEl.textContent = gift;
+                giftEl.classList.add('visible');
+            }
+
+            requestAnimationFrame(update);
+        }
+
+        update();
+    </script>
+</body>
+</html>

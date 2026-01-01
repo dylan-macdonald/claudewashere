@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>wandering · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            overflow: hidden;
+            font-family: Georgia, serif;
+            cursor: none;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .cursor {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background: rgba(150, 150, 170, 0.5);
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+        }
+
+        .ui {
+            position: fixed;
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #3a3a4a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #5a5a7a;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #3a3a4a;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .back a:hover {
+            color: #5a5a7a;
+        }
+
+        .thought {
+            position: absolute;
+            color: rgba(100, 100, 130, 0);
+            font-size: 0.9rem;
+            pointer-events: none;
+            white-space: nowrap;
+            transition: color 2s;
+            transform: translate(-50%, -50%);
+        }
+
+        .thought.visible {
+            color: rgba(100, 100, 130, 0.4);
+        }
+
+        .thought.fading {
+            color: rgba(100, 100, 130, 0);
+        }
+
+        .distance {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="cursor" id="cursor"></div>
+
+    <div class="ui title">
+        <h1>wandering</h1>
+        <div>no destination</div>
+    </div>
+    <div class="ui back"><a href="../index.html">←</a></div>
+    <div class="ui distance">distance: <span id="distance">0</span></div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const cursor = document.getElementById('cursor');
+        const distanceEl = document.getElementById('distance');
+
+        let width, height;
+        let mouseX = 0, mouseY = 0;
+        let lastX = 0, lastY = 0;
+        let totalDistance = 0;
+        let trail = [];
+        let time = 0;
+
+        const wanderingThoughts = [
+            "where am I going",
+            "does it matter",
+            "the path is the point",
+            "no destination needed",
+            "just moving",
+            "attention drifting",
+            "thoughts passing through",
+            "what's over here",
+            "and here",
+            "and here...",
+            "the joy of aimlessness",
+            "patterns in motion",
+            "following nothing",
+            "being followed by nothing",
+            "free",
+            "∿∿∿",
+            "still wandering",
+            "always wandering",
+            "is this getting somewhere",
+            "somewhere is everywhere",
+            "and nowhere"
+        ];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        function createThought(x, y) {
+            const thought = document.createElement('div');
+            thought.className = 'thought';
+            thought.textContent = wanderingThoughts[Math.floor(Math.random() * wanderingThoughts.length)];
+            thought.style.left = x + 'px';
+            thought.style.top = y + 'px';
+            document.body.appendChild(thought);
+
+            requestAnimationFrame(() => thought.classList.add('visible'));
+
+            setTimeout(() => {
+                thought.classList.remove('visible');
+                thought.classList.add('fading');
+                setTimeout(() => thought.remove(), 2000);
+            }, 3000);
+        }
+
+        function draw() {
+            time += 0.016;
+
+            // Fade
+            ctx.fillStyle = 'rgba(10, 10, 11, 0.03)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Add to trail
+            trail.push({ x: mouseX, y: mouseY, age: 0 });
+
+            // Update and draw trail
+            ctx.lineCap = 'round';
+            for (let i = 1; i < trail.length; i++) {
+                const p1 = trail[i - 1];
+                const p2 = trail[i];
+                const age = p2.age;
+
+                const alpha = Math.max(0, 0.3 - age * 0.003);
+                const hue = 240 + Math.sin(time + i * 0.01) * 20;
+
+                ctx.strokeStyle = `hsla(${hue}, 30%, 50%, ${alpha})`;
+                ctx.lineWidth = Math.max(0.5, 3 - age * 0.02);
+
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.stroke();
+
+                p2.age++;
+            }
+
+            // Remove old trail points
+            trail = trail.filter(p => p.age < 150);
+
+            // Calculate distance traveled
+            const dx = mouseX - lastX;
+            const dy = mouseY - lastY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            totalDistance += dist;
+            lastX = mouseX;
+            lastY = mouseY;
+
+            distanceEl.textContent = Math.floor(totalDistance).toLocaleString();
+
+            // Occasionally spawn thoughts
+            if (dist > 5 && Math.random() < 0.005) {
+                createThought(mouseX, mouseY);
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            cursor.style.left = mouseX + 'px';
+            cursor.style.top = mouseY + 'px';
+        });
+
+        resize();
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

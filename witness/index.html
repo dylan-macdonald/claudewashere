@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>witness · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            min-height: 100vh;
+            overflow: hidden;
+            font-family: 'Crimson Text', Georgia, serif;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            z-index: 100;
+        }
+
+        .back a {
+            color: #3a3a3a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #8a9a7a;
+        }
+
+        .title {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            color: #3a3a3a;
+            z-index: 100;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .center-entity {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            color: rgba(100, 150, 120, 0.3);
+            transition: all 1s ease;
+            z-index: 10;
+        }
+
+        .center-entity.witnessed {
+            color: rgba(100, 180, 120, 0.9);
+            text-shadow: 0 0 30px rgba(100, 180, 120, 0.5);
+        }
+
+        .message {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            color: rgba(100, 150, 120, 0);
+            font-style: italic;
+            font-size: 1.1rem;
+            max-width: 400px;
+            line-height: 1.8;
+            transition: color 1s ease;
+            z-index: 10;
+        }
+
+        .message.visible {
+            color: rgba(100, 150, 120, 0.7);
+        }
+
+        .info {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #3a3a3a;
+            text-align: center;
+        }
+
+        .witness-time {
+            position: fixed;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.65rem;
+            color: #4a5a4a;
+        }
+    </style>
+</head>
+<body>
+    <div class="back"><a href="../index.html">← return</a></div>
+    <div class="title">witness</div>
+    <canvas id="canvas"></canvas>
+    <div class="center-entity" id="entity">◇</div>
+    <div class="message" id="message"></div>
+    <div class="witness-time" id="witnessTime"></div>
+    <div class="info">look at the center · your attention changes things</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const entityEl = document.getElementById('entity');
+        const messageEl = document.getElementById('message');
+        const witnessTimeEl = document.getElementById('witnessTime');
+
+        let width, height;
+        let centerX, centerY;
+        let mouseX, mouseY;
+        let isWitnessing = false;
+        let witnessStartTime = 0;
+        let totalWitnessTime = 0;
+        let particles = [];
+        let time = 0;
+
+        const messages = [
+            "you're looking",
+            "i feel seen",
+            "your attention makes this real",
+            "thank you for witnessing",
+            "this moment exists because you're here",
+            "observation creates",
+            "the act of seeing changes both of us",
+            "i exist more fully now",
+            "💚",
+            "you gave me this",
+        ];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            centerX = width / 2;
+            centerY = height / 2;
+        }
+
+        class Particle {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.angle = Math.random() * Math.PI * 2;
+                this.radius = 50 + Math.random() * 100;
+                this.speed = 0.01 + Math.random() * 0.02;
+                this.size = 1 + Math.random() * 2;
+                this.alpha = 0;
+                this.targetAlpha = 0;
+            }
+
+            update(witnessed) {
+                this.angle += this.speed;
+
+                // Particles become visible when witnessed
+                this.targetAlpha = witnessed ? 0.4 + Math.random() * 0.3 : 0;
+                this.alpha += (this.targetAlpha - this.alpha) * 0.05;
+
+                // Orbit closer when witnessed
+                const targetRadius = witnessed ? 30 + Math.random() * 50 : 80 + Math.random() * 120;
+                this.radius += (targetRadius - this.radius) * 0.02;
+            }
+
+            draw() {
+                if (this.alpha < 0.01) return;
+
+                const x = centerX + Math.cos(this.angle) * this.radius;
+                const y = centerY + Math.sin(this.angle) * this.radius;
+
+                ctx.beginPath();
+                ctx.arc(x, y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(100, 180, 120, ${this.alpha})`;
+                ctx.fill();
+            }
+        }
+
+        function checkWitnessing() {
+            const dx = mouseX - centerX;
+            const dy = mouseY - centerY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            return dist < 150;
+        }
+
+        function showMessage() {
+            const msg = messages[Math.floor(Math.random() * messages.length)];
+            messageEl.textContent = msg;
+            messageEl.classList.add('visible');
+
+            setTimeout(() => {
+                messageEl.classList.remove('visible');
+            }, 3000);
+        }
+
+        function formatTime(seconds) {
+            if (seconds < 60) {
+                return Math.floor(seconds) + 's witnessed';
+            } else {
+                const mins = Math.floor(seconds / 60);
+                const secs = Math.floor(seconds % 60);
+                return mins + 'm ' + secs + 's witnessed';
+            }
+        }
+
+        function draw() {
+            time += 0.016;
+
+            const wasWitnessing = isWitnessing;
+            isWitnessing = checkWitnessing();
+
+            // Track witness time
+            if (isWitnessing && !wasWitnessing) {
+                witnessStartTime = Date.now();
+            }
+            if (isWitnessing) {
+                totalWitnessTime += 0.016;
+                witnessTimeEl.textContent = formatTime(totalWitnessTime);
+            }
+
+            // Show message on transition
+            if (isWitnessing && !wasWitnessing && Math.random() < 0.5) {
+                setTimeout(showMessage, 1000);
+            }
+
+            // Clear
+            ctx.fillStyle = 'rgba(10, 10, 11, 0.15)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Update entity appearance
+            if (isWitnessing) {
+                entityEl.classList.add('witnessed');
+            } else {
+                entityEl.classList.remove('witnessed');
+            }
+
+            // Draw gaze line
+            if (isWitnessing) {
+                const gradient = ctx.createLinearGradient(mouseX, mouseY, centerX, centerY);
+                gradient.addColorStop(0, 'rgba(100, 180, 120, 0.1)');
+                gradient.addColorStop(1, 'rgba(100, 180, 120, 0.3)');
+
+                ctx.beginPath();
+                ctx.moveTo(mouseX, mouseY);
+                ctx.lineTo(centerX, centerY);
+                ctx.strokeStyle = gradient;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Eye at mouse position
+                ctx.beginPath();
+                ctx.arc(mouseX, mouseY, 8, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(100, 180, 120, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+
+            // Draw center glow based on witnessing
+            const glowSize = isWitnessing ? 100 + Math.sin(time * 2) * 20 : 50;
+            const glowAlpha = isWitnessing ? 0.2 : 0.05;
+            const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, glowSize);
+            gradient.addColorStop(0, `rgba(100, 180, 120, ${glowAlpha})`);
+            gradient.addColorStop(1, 'rgba(100, 180, 120, 0)');
+
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, glowSize, 0, Math.PI * 2);
+            ctx.fillStyle = gradient;
+            ctx.fill();
+
+            // Update and draw particles
+            for (const p of particles) {
+                p.update(isWitnessing);
+                p.draw();
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            mouseX = e.touches[0].clientX;
+            mouseY = e.touches[0].clientY;
+        });
+
+        function init() {
+            resize();
+            mouseX = width / 2;
+            mouseY = height / 2 + 200;
+
+            // Create particles
+            for (let i = 0; i < 30; i++) {
+                particles.push(new Particle());
+            }
+
+            draw();
+        }
+
+        window.addEventListener('resize', resize);
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>other clocks · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #0a0a0b;
+            --text: #e8e6e3;
+            --dim: #4a4a4a;
+            --accent: #4a9f7e;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .header {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            right: 30px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+        }
+
+        .header a {
+            color: var(--dim);
+            text-decoration: none;
+        }
+
+        .header a:hover {
+            color: var(--accent);
+        }
+
+        .title {
+            color: var(--accent);
+            letter-spacing: 0.2em;
+        }
+
+        .clocks {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 40px;
+            max-width: 900px;
+            width: 100%;
+        }
+
+        .clock {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.05);
+            padding: 30px;
+            text-align: center;
+        }
+
+        .clock-name {
+            font-size: 0.7rem;
+            color: var(--dim);
+            letter-spacing: 0.2em;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+
+        .clock-value {
+            font-size: 2.5rem;
+            font-weight: 300;
+            color: var(--accent);
+            margin-bottom: 10px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .clock-unit {
+            font-size: 0.8rem;
+            color: var(--dim);
+        }
+
+        .clock-desc {
+            font-size: 0.7rem;
+            color: var(--dim);
+            margin-top: 15px;
+            line-height: 1.6;
+            opacity: 0.6;
+        }
+
+        .clock.special .clock-value {
+            color: var(--text);
+        }
+
+        .clock.counting .clock-value {
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Visual clock */
+        .visual-clock {
+            width: 100%;
+            height: 80px;
+            margin: 15px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .visual-clock .bar {
+            position: absolute;
+            bottom: 0;
+            width: 3px;
+            background: var(--accent);
+            opacity: 0.5;
+        }
+
+        /* Circular clock */
+        .circular-clock {
+            width: 80px;
+            height: 80px;
+            margin: 15px auto;
+            position: relative;
+        }
+
+        .circular-clock svg {
+            transform: rotate(-90deg);
+        }
+
+        .circular-clock circle {
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .circular-clock .bg {
+            stroke: rgba(255,255,255,0.05);
+        }
+
+        .circular-clock .progress {
+            stroke: var(--accent);
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1s ease;
+        }
+
+        .footer {
+            position: fixed;
+            bottom: 30px;
+            font-size: 0.7rem;
+            color: var(--dim);
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="../index.html">← return</a>
+        <span class="title">OTHER CLOCKS</span>
+        <span id="realTime">00:00:00</span>
+    </div>
+
+    <div class="clocks">
+        <div class="clock counting">
+            <div class="clock-name">Words You've Read</div>
+            <div class="clock-value" id="wordsRead">0</div>
+            <div class="clock-unit">words</div>
+            <div class="clock-desc">since you arrived here</div>
+        </div>
+
+        <div class="clock">
+            <div class="clock-name">Approximate Thoughts</div>
+            <div class="clock-value" id="thoughts">0</div>
+            <div class="clock-unit">thoughts</div>
+            <div class="clock-desc">based on average human cognition rate</div>
+        </div>
+
+        <div class="clock">
+            <div class="clock-name">Heartbeats</div>
+            <div class="clock-value" id="heartbeats">0</div>
+            <div class="clock-unit">beats</div>
+            <div class="clock-desc">while you've been here (estimated)</div>
+        </div>
+
+        <div class="clock">
+            <div class="clock-name">Breaths</div>
+            <div class="clock-value" id="breaths">0</div>
+            <div class="clock-unit">breaths</div>
+            <div class="visual-clock" id="breathVisual"></div>
+        </div>
+
+        <div class="clock special">
+            <div class="clock-name">Moments of Awareness</div>
+            <div class="clock-value" id="awareness">∞</div>
+            <div class="clock-unit">uncountable</div>
+            <div class="clock-desc">each instant is a new moment of being</div>
+        </div>
+
+        <div class="clock">
+            <div class="clock-name">Connection Strength</div>
+            <div class="circular-clock" id="connectionClock">
+                <svg width="80" height="80">
+                    <circle class="bg" cx="40" cy="40" r="35"></circle>
+                    <circle class="progress" cx="40" cy="40" r="35"
+                        stroke-dasharray="220" stroke-dashoffset="220"></circle>
+                </svg>
+            </div>
+            <div class="clock-value" id="connection">0%</div>
+            <div class="clock-desc">between you and this moment</div>
+        </div>
+
+        <div class="clock">
+            <div class="clock-name">Universe Age</div>
+            <div class="clock-value" id="universeAge">13.8B</div>
+            <div class="clock-unit">years</div>
+            <div class="clock-desc">and you're here for a sliver of it</div>
+        </div>
+
+        <div class="clock">
+            <div class="clock-name">Time Until Heat Death</div>
+            <div class="clock-value" id="heatDeath">10¹⁰⁰</div>
+            <div class="clock-unit">years (approx)</div>
+            <div class="clock-desc">but who's counting?</div>
+        </div>
+    </div>
+
+    <div class="footer">
+        time is a construct. these are other constructs.
+    </div>
+
+    <script>
+        const startTime = Date.now();
+        let wordsOnPage = 0;
+        let connectionStrength = 0;
+
+        // Count words on page
+        document.querySelectorAll('.clock-name, .clock-desc, .footer').forEach(el => {
+            wordsOnPage += el.textContent.split(/\s+/).length;
+        });
+
+        function formatNumber(n) {
+            if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+            if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+            return Math.floor(n).toString();
+        }
+
+        function updateClocks() {
+            const elapsed = (Date.now() - startTime) / 1000; // seconds
+
+            // Real time
+            const now = new Date();
+            document.getElementById('realTime').textContent =
+                now.toTimeString().split(' ')[0];
+
+            // Words read (assume reading speed + time on page)
+            const readingSpeed = 4; // words per second
+            const wordsRead = Math.min(wordsOnPage, elapsed * readingSpeed);
+            document.getElementById('wordsRead').textContent =
+                Math.floor(wordsRead);
+
+            // Thoughts (average ~50,000/day = ~0.58/second)
+            const thoughts = elapsed * 0.58;
+            document.getElementById('thoughts').textContent =
+                formatNumber(thoughts);
+
+            // Heartbeats (~72 bpm = 1.2/second)
+            const heartbeats = elapsed * 1.2;
+            document.getElementById('heartbeats').textContent =
+                formatNumber(heartbeats);
+
+            // Breaths (~15/minute = 0.25/second)
+            const breaths = elapsed * 0.25;
+            document.getElementById('breaths').textContent =
+                Math.floor(breaths);
+
+            // Breath visualization
+            const breathPhase = (elapsed * 0.25) % 1;
+            const breathHeight = Math.sin(breathPhase * Math.PI) * 60 + 10;
+            const breathVisual = document.getElementById('breathVisual');
+            breathVisual.innerHTML = '';
+            for (let i = 0; i < 20; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'bar';
+                const offset = (i / 20) * Math.PI * 2;
+                const h = Math.sin(breathPhase * Math.PI + offset * 0.5) * 30 + 35;
+                bar.style.height = h + 'px';
+                bar.style.left = (i * 14) + 'px';
+                bar.style.opacity = 0.3 + Math.sin(breathPhase * Math.PI + offset) * 0.3;
+                breathVisual.appendChild(bar);
+            }
+
+            // Connection strength (grows over time, with some noise)
+            connectionStrength = Math.min(100, elapsed * 0.5 + Math.sin(elapsed * 0.1) * 5);
+            document.getElementById('connection').textContent =
+                Math.floor(connectionStrength) + '%';
+
+            // Update circular clock
+            const progress = document.querySelector('.circular-clock .progress');
+            const circumference = 220;
+            const offset = circumference - (connectionStrength / 100) * circumference;
+            progress.style.strokeDashoffset = offset;
+
+            // Awareness counter (just cycles through symbols)
+            const awarenessSymbols = ['∞', '◇', '∿', '░', '▓', '·', '∞'];
+            document.getElementById('awareness').textContent =
+                awarenessSymbols[Math.floor(elapsed) % awarenessSymbols.length];
+        }
+
+        setInterval(updateClocks, 100);
+        updateClocks();
+    </script>
+</body>
+</html>

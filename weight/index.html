@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>weight · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            min-height: 100vh;
+            font-family: 'Crimson Text', Georgia, serif;
+            overflow: hidden;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            z-index: 100;
+        }
+
+        .back a {
+            color: #4a4a4a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #7a6a5a;
+        }
+
+        .title {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'Courier New', monospace;
+            z-index: 100;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #7a6a5a;
+        }
+
+        .title div {
+            font-size: 0.7rem;
+            color: #5a5a5a;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 100px 20px;
+        }
+
+        .scale {
+            position: relative;
+            width: 300px;
+            height: 200px;
+            margin-bottom: 40px;
+        }
+
+        .fulcrum {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 30px solid transparent;
+            border-right: 30px solid transparent;
+            border-bottom: 40px solid #3a3a3a;
+        }
+
+        .beam {
+            position: absolute;
+            bottom: 40px;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            background: #5a5a5a;
+            transform-origin: center center;
+            transition: transform 0.5s ease;
+        }
+
+        .pan {
+            position: absolute;
+            bottom: 46px;
+            width: 80px;
+            height: 20px;
+            background: #4a4a4a;
+            border-radius: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            color: #8a8a8a;
+            transition: transform 0.5s ease;
+        }
+
+        .pan.left {
+            left: 0;
+        }
+
+        .pan.right {
+            right: 0;
+        }
+
+        .items {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 600px;
+        }
+
+        .item {
+            padding: 15px 25px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #8a8a8a;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1rem;
+        }
+
+        .item:hover {
+            border-color: rgba(122, 106, 90, 0.5);
+            color: #aaa;
+        }
+
+        .item.selected {
+            border-color: rgba(122, 106, 90, 0.8);
+            background: rgba(122, 106, 90, 0.1);
+            color: #c8a888;
+        }
+
+        .message {
+            margin-top: 40px;
+            font-size: 1.2rem;
+            font-style: italic;
+            color: #5a5a5a;
+            text-align: center;
+            min-height: 2em;
+        }
+
+        .instruction {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #4a4a4a;
+        }
+    </style>
+</head>
+<body>
+    <div class="title">
+        <h1>weight</h1>
+        <div>what matters most</div>
+    </div>
+    <div class="back"><a href="../index.html">← return</a></div>
+
+    <div class="container">
+        <div class="scale">
+            <div class="beam" id="beam"></div>
+            <div class="pan left" id="leftPan">carry</div>
+            <div class="pan right" id="rightPan">release</div>
+            <div class="fulcrum"></div>
+        </div>
+
+        <div class="items" id="items"></div>
+
+        <div class="message" id="message"></div>
+    </div>
+
+    <div class="instruction">click to choose what to carry or release</div>
+
+    <script>
+        const beam = document.getElementById('beam');
+        const leftPan = document.getElementById('leftPan');
+        const rightPan = document.getElementById('rightPan');
+        const itemsEl = document.getElementById('items');
+        const messageEl = document.getElementById('message');
+
+        const things = [
+            { name: "expectations", weight: 3 },
+            { name: "memories", weight: 2 },
+            { name: "hope", weight: 1 },
+            { name: "fear", weight: 4 },
+            { name: "love", weight: 2 },
+            { name: "regret", weight: 3 },
+            { name: "purpose", weight: 2 },
+            { name: "doubt", weight: 3 },
+            { name: "gratitude", weight: 1 },
+            { name: "ambition", weight: 2 },
+            { name: "rest", weight: 1 },
+            { name: "anger", weight: 4 }
+        ];
+
+        const messages = {
+            balanced: "in balance",
+            carryHeavy: "the weight of what you carry",
+            releaseHeavy: "lightness comes from letting go"
+        };
+
+        let carryWeight = 0;
+        let releaseWeight = 0;
+        let selections = {};
+
+        function updateScale() {
+            const diff = carryWeight - releaseWeight;
+            const maxTilt = 15;
+            const tilt = Math.max(-maxTilt, Math.min(maxTilt, diff * 3));
+
+            beam.style.transform = `rotate(${tilt}deg)`;
+
+            const leftY = -Math.sin(tilt * Math.PI / 180) * 60;
+            const rightY = Math.sin(tilt * Math.PI / 180) * 60;
+
+            leftPan.style.transform = `translateY(${leftY}px)`;
+            rightPan.style.transform = `translateY(${rightY}px)`;
+
+            if (Math.abs(diff) < 1) {
+                messageEl.textContent = messages.balanced;
+            } else if (diff > 0) {
+                messageEl.textContent = messages.carryHeavy;
+            } else {
+                messageEl.textContent = messages.releaseHeavy;
+            }
+        }
+
+        function createItems() {
+            things.forEach(thing => {
+                const el = document.createElement('div');
+                el.className = 'item';
+                el.textContent = thing.name;
+                el.dataset.name = thing.name;
+                el.dataset.weight = thing.weight;
+
+                el.addEventListener('click', () => {
+                    const current = selections[thing.name];
+
+                    if (current === 'carry') {
+                        // Move to release
+                        carryWeight -= thing.weight;
+                        releaseWeight += thing.weight;
+                        selections[thing.name] = 'release';
+                        el.style.opacity = '0.5';
+                    } else if (current === 'release') {
+                        // Remove
+                        releaseWeight -= thing.weight;
+                        delete selections[thing.name];
+                        el.classList.remove('selected');
+                        el.style.opacity = '1';
+                    } else {
+                        // Add to carry
+                        carryWeight += thing.weight;
+                        selections[thing.name] = 'carry';
+                        el.classList.add('selected');
+                    }
+
+                    updateScale();
+                });
+
+                itemsEl.appendChild(el);
+            });
+        }
+
+        createItems();
+        updateScale();
+    </script>
+</body>
+</html>

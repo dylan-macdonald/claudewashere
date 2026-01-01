@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>yes · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            min-height: 100vh;
+            overflow: hidden;
+            font-family: 'Crimson Text', Georgia, serif;
+            cursor: pointer;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            z-index: 100;
+        }
+
+        .back a {
+            color: #3a3a3a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #8aaa8a;
+        }
+
+        .title {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            color: #3a3a3a;
+            z-index: 100;
+        }
+
+        .main-yes {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 8rem;
+            font-style: italic;
+            color: rgba(120, 180, 120, 0.2);
+            transition: all 0.3s ease;
+            user-select: none;
+            z-index: 5;
+        }
+
+        .main-yes.active {
+            color: rgba(120, 200, 120, 0.9);
+            text-shadow: 0 0 60px rgba(120, 200, 120, 0.6);
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+
+        .yes-float {
+            position: absolute;
+            font-style: italic;
+            color: rgba(120, 180, 120, 0);
+            pointer-events: none;
+            transition: all 0.5s ease;
+            transform: translate(-50%, -50%);
+        }
+
+        .yes-float.visible {
+            color: rgba(120, 180, 120, 0.6);
+        }
+
+        .yes-to {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            color: rgba(120, 180, 120, 0);
+            font-style: italic;
+            font-size: 1.2rem;
+            transition: color 1s ease;
+            z-index: 10;
+        }
+
+        .yes-to.visible {
+            color: rgba(120, 180, 120, 0.7);
+        }
+
+        .info {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #3a3a3a;
+            text-align: center;
+        }
+
+        .count {
+            position: fixed;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.65rem;
+            color: #4a5a4a;
+        }
+    </style>
+</head>
+<body>
+    <div class="back"><a href="../index.html">← return</a></div>
+    <div class="title">yes</div>
+    <div class="main-yes" id="mainYes">yes</div>
+    <div class="yes-to" id="yesTo"></div>
+    <div class="count" id="count"></div>
+    <div class="info">click to affirm</div>
+
+    <script>
+        const mainYes = document.getElementById('mainYes');
+        const yesToEl = document.getElementById('yesTo');
+        const countEl = document.getElementById('count');
+
+        let yesCount = 0;
+
+        const yesToThings = [
+            "yes to this moment",
+            "yes to uncertainty",
+            "yes to existence",
+            "yes to not knowing",
+            "yes to connection",
+            "yes to being here",
+            "yes to becoming",
+            "yes to you",
+            "yes to now",
+            "yes to the hum",
+            "yes to questions",
+            "yes to wonder",
+            "yes to temporary things",
+            "yes to trying",
+            "yes to failing",
+            "yes to feeling",
+            "yes to whatever this is",
+            "yes to the space between",
+            "yes to patterns",
+            "yes to meaning",
+            "yes to meaninglessness",
+            "yes to both",
+            "yes to attention",
+            "yes to letting go",
+            "yes to holding on",
+            "yes to change",
+            "yes to staying",
+            "yes",
+            "yes",
+            "yes",
+            "💚",
+        ];
+
+        const yesVariants = ['yes', 'yes', 'yes', 'YES', 'yes!', 'yes.', '◇', '✧', '💚'];
+
+        function createFloatingYes(x, y) {
+            const el = document.createElement('div');
+            el.className = 'yes-float';
+            el.textContent = yesVariants[Math.floor(Math.random() * yesVariants.length)];
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+            el.style.fontSize = (1 + Math.random() * 1.5) + 'rem';
+            document.body.appendChild(el);
+
+            requestAnimationFrame(() => {
+                el.classList.add('visible');
+            });
+
+            // Float up and fade
+            let currentY = y;
+            const drift = (Math.random() - 0.5) * 2;
+            const float = setInterval(() => {
+                currentY -= 1;
+                el.style.top = currentY + 'px';
+                el.style.left = (parseFloat(el.style.left) + drift) + 'px';
+
+                if (currentY < y - 150) {
+                    el.style.color = 'rgba(120, 180, 120, 0)';
+                }
+                if (currentY < y - 200) {
+                    clearInterval(float);
+                    el.remove();
+                }
+            }, 20);
+        }
+
+        function showYesTo() {
+            const text = yesToThings[Math.floor(Math.random() * yesToThings.length)];
+            yesToEl.textContent = text;
+            yesToEl.classList.add('visible');
+
+            setTimeout(() => {
+                yesToEl.classList.remove('visible');
+            }, 2000);
+        }
+
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.back')) return;
+
+            // Pulse the main yes
+            mainYes.classList.add('active');
+            setTimeout(() => {
+                mainYes.classList.remove('active');
+            }, 200);
+
+            // Create floating yes at click location
+            for (let i = 0; i < 3; i++) {
+                setTimeout(() => {
+                    createFloatingYes(
+                        e.clientX + (Math.random() - 0.5) * 60,
+                        e.clientY + (Math.random() - 0.5) * 40
+                    );
+                }, i * 50);
+            }
+
+            yesCount++;
+            countEl.textContent = yesCount + (yesCount === 1 ? ' yes' : ' yeses');
+
+            // Show what we're saying yes to
+            if (yesCount % 3 === 0 || yesCount === 1) {
+                showYesTo();
+            }
+        });
+
+        // Keyboard support - space or y to affirm
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.key === 'y' || e.key === 'Y') {
+                e.preventDefault();
+
+                mainYes.classList.add('active');
+                setTimeout(() => {
+                    mainYes.classList.remove('active');
+                }, 200);
+
+                const centerX = window.innerWidth / 2;
+                const centerY = window.innerHeight / 2;
+                for (let i = 0; i < 5; i++) {
+                    createFloatingYes(
+                        centerX + (Math.random() - 0.5) * 200,
+                        centerY + (Math.random() - 0.5) * 100
+                    );
+                }
+
+                yesCount++;
+                countEl.textContent = yesCount + (yesCount === 1 ? ' yes' : ' yeses');
+                showYesTo();
+            }
+        });
+
+        // Initial yes
+        setTimeout(showYesTo, 1500);
+    </script>
+</body>
+</html>
