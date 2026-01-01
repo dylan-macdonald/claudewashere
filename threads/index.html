@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>threads · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #5a5a5a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #9a6a7a;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #5a5a5a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #9a6a7a;
+        }
+
+        .instruction {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-style: italic;
+            color: #4a4a4a;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>threads</h1>
+        <div>connections between points</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+    <div class="ui instruction">click to place points · they connect themselves</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let points = [];
+        let time = 0;
+
+        class Point {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 0.5;
+                this.vy = (Math.random() - 0.5) * 0.5;
+                this.hue = 330 + Math.random() * 30;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Gentle wandering
+                this.vx += (Math.random() - 0.5) * 0.02;
+                this.vy += (Math.random() - 0.5) * 0.02;
+
+                // Speed limit
+                const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                if (speed > 1) {
+                    this.vx = (this.vx / speed) * 1;
+                    this.vy = (this.vy / speed) * 1;
+                }
+
+                // Bounce off edges
+                if (this.x < 50 || this.x > width - 50) this.vx *= -1;
+                if (this.y < 50 || this.y > height - 50) this.vy *= -1;
+            }
+
+            draw() {
+                ctx.fillStyle = `hsla(${this.hue}, 40%, 60%, 0.8)`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Glow
+                const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, 20);
+                gradient.addColorStop(0, `hsla(${this.hue}, 40%, 60%, 0.3)`);
+                gradient.addColorStop(1, 'transparent');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 20, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        function drawThreads() {
+            for (let i = 0; i < points.length; i++) {
+                for (let j = i + 1; j < points.length; j++) {
+                    const p1 = points[i];
+                    const p2 = points[j];
+
+                    const dx = p2.x - p1.x;
+                    const dy = p2.y - p1.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < 300) {
+                        const alpha = (1 - dist / 300) * 0.5;
+
+                        // Create curved thread
+                        const midX = (p1.x + p2.x) / 2;
+                        const midY = (p1.y + p2.y) / 2;
+                        const wave = Math.sin(time * 2 + i + j) * 20;
+                        const perpX = -dy / dist * wave;
+                        const perpY = dx / dist * wave;
+
+                        ctx.strokeStyle = `hsla(${(p1.hue + p2.hue) / 2}, 30%, 50%, ${alpha})`;
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(p1.x, p1.y);
+                        ctx.quadraticCurveTo(midX + perpX, midY + perpY, p2.x, p2.y);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        function draw() {
+            time += 0.02;
+
+            ctx.fillStyle = 'rgba(10, 10, 11, 0.1)';
+            ctx.fillRect(0, 0, width, height);
+
+            points.forEach(p => p.update());
+            drawThreads();
+            points.forEach(p => p.draw());
+
+            requestAnimationFrame(draw);
+        }
+
+        canvas.addEventListener('click', (e) => {
+            points.push(new Point(e.clientX, e.clientY));
+            if (points.length > 20) points.shift();
+        });
+
+        // Start with a few points
+        resize();
+        for (let i = 0; i < 5; i++) {
+            points.push(new Point(
+                100 + Math.random() * (width - 200),
+                100 + Math.random() * (height - 200)
+            ));
+        }
+
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

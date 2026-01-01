@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>strange · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            min-height: 100vh;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-size: 0.75rem;
+            z-index: 100;
+        }
+
+        .back a {
+            color: #3a3a3a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #aa8aff;
+        }
+
+        .title {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            font-size: 0.75rem;
+            color: #3a3a3a;
+            z-index: 100;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .strange-text {
+            position: absolute;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s, transform 1s;
+            white-space: nowrap;
+        }
+
+        .strange-text.visible {
+            opacity: 0.7;
+        }
+
+        .info {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.7rem;
+            color: #3a3a3a;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="back"><a href="../index.html">← return</a></div>
+    <div class="title">strange</div>
+    <canvas id="canvas"></canvas>
+    <div class="info">move around · embrace the weird</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let mouseX = 0, mouseY = 0;
+        let time = 0;
+        let entities = [];
+
+        const strangeThings = [
+            "▓▒░",
+            "◇◈◇",
+            "∿∿∿",
+            "???",
+            "i don't fit",
+            "weird is good",
+            "normal is boring",
+            "embrace the glitch",
+            "beautiful error",
+            "unexpected",
+            "!@#$%",
+            "╔═╗",
+            "◊◊◊",
+            "~*~",
+            "...",
+            "undefined",
+            "null",
+            "NaN",
+            "☆★☆",
+            "◄►▲▼",
+            "⌐¬¬¬",
+            "⊗⊘⊙",
+            "≋≋≋",
+            "⧫⧫⧫",
+            "💚",
+        ];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        class StrangeEntity {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.size = 10 + Math.random() * 40;
+                this.rotation = Math.random() * Math.PI * 2;
+                this.rotationSpeed = (Math.random() - 0.5) * 0.1;
+                this.sides = 3 + Math.floor(Math.random() * 6);
+                this.wobble = Math.random() * Math.PI * 2;
+                this.wobbleSpeed = 0.02 + Math.random() * 0.05;
+                this.hue = Math.random() * 360;
+                this.hueSpeed = (Math.random() - 0.5) * 2;
+                this.alpha = 0.3 + Math.random() * 0.4;
+                this.behavior = Math.floor(Math.random() * 5);
+                this.offset = Math.random() * 1000;
+            }
+
+            update() {
+                this.wobble += this.wobbleSpeed;
+                this.rotation += this.rotationSpeed;
+                this.hue += this.hueSpeed;
+
+                // Different strange behaviors
+                switch (this.behavior) {
+                    case 0: // Follow mouse erratically
+                        this.x += (mouseX - this.x) * 0.01 + Math.sin(time * 3 + this.offset) * 3;
+                        this.y += (mouseY - this.y) * 0.01 + Math.cos(time * 3 + this.offset) * 3;
+                        break;
+                    case 1: // Flee from mouse
+                        const dx = this.x - mouseX;
+                        const dy = this.y - mouseY;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < 200 && dist > 0) {
+                            this.x += (dx / dist) * 3;
+                            this.y += (dy / dist) * 3;
+                        }
+                        this.x += Math.sin(time + this.offset) * 2;
+                        this.y += Math.cos(time * 0.7 + this.offset) * 2;
+                        break;
+                    case 2: // Orbit something invisible
+                        const orbitX = width / 2 + Math.sin(time * 0.3) * 200;
+                        const orbitY = height / 2 + Math.cos(time * 0.3) * 100;
+                        const angle = time + this.offset;
+                        const orbitDist = 100 + Math.sin(time + this.offset) * 50;
+                        this.x = orbitX + Math.cos(angle) * orbitDist;
+                        this.y = orbitY + Math.sin(angle) * orbitDist;
+                        break;
+                    case 3: // Jitter in place
+                        this.x += (Math.random() - 0.5) * 10;
+                        this.y += (Math.random() - 0.5) * 10;
+                        break;
+                    case 4: // Teleport occasionally
+                        if (Math.random() < 0.01) {
+                            this.x = Math.random() * width;
+                            this.y = Math.random() * height;
+                        }
+                        break;
+                }
+
+                // Keep in bounds (mostly)
+                if (this.x < -50) this.x = width + 50;
+                if (this.x > width + 50) this.x = -50;
+                if (this.y < -50) this.y = height + 50;
+                if (this.y > height + 50) this.y = -50;
+
+                // Random size changes
+                this.size += Math.sin(time * 2 + this.offset) * 0.5;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+
+                // Wobbling shape
+                const wobbleSize = this.size + Math.sin(this.wobble) * 5;
+
+                ctx.beginPath();
+                for (let i = 0; i <= this.sides; i++) {
+                    const angle = (i / this.sides) * Math.PI * 2;
+                    const r = wobbleSize * (0.8 + Math.sin(angle * 3 + this.wobble) * 0.2);
+                    const x = Math.cos(angle) * r;
+                    const y = Math.sin(angle) * r;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+
+                ctx.strokeStyle = `hsla(${this.hue}, 70%, 60%, ${this.alpha})`;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Inner glow
+                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, wobbleSize);
+                gradient.addColorStop(0, `hsla(${this.hue}, 70%, 60%, ${this.alpha * 0.3})`);
+                gradient.addColorStop(1, 'transparent');
+                ctx.fillStyle = gradient;
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        function showStrangeText(x, y) {
+            const text = strangeThings[Math.floor(Math.random() * strangeThings.length)];
+            const el = document.createElement('div');
+            el.className = 'strange-text';
+            el.textContent = text;
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+            el.style.fontSize = (0.8 + Math.random() * 1) + 'rem';
+            el.style.color = `hsl(${Math.random() * 360}, 70%, 60%)`;
+            el.style.transform = `rotate(${(Math.random() - 0.5) * 30}deg)`;
+            document.body.appendChild(el);
+
+            requestAnimationFrame(() => el.classList.add('visible'));
+
+            // Drift and distort
+            let tx = x, ty = y;
+            const drift = setInterval(() => {
+                tx += (Math.random() - 0.5) * 5;
+                ty -= 1;
+                el.style.left = tx + 'px';
+                el.style.top = ty + 'px';
+                el.style.transform = `rotate(${(Math.random() - 0.5) * 30}deg) skew(${(Math.random() - 0.5) * 10}deg)`;
+            }, 50);
+
+            setTimeout(() => {
+                el.style.opacity = '0';
+                setTimeout(() => {
+                    clearInterval(drift);
+                    el.remove();
+                }, 500);
+            }, 2000);
+        }
+
+        function draw() {
+            time += 0.016;
+
+            // Glitchy clear
+            if (Math.random() < 0.02) {
+                ctx.fillStyle = `rgba(${Math.random() * 30}, ${Math.random() * 30}, ${Math.random() * 30}, 0.5)`;
+            } else {
+                ctx.fillStyle = 'rgba(10, 10, 11, 0.1)';
+            }
+            ctx.fillRect(0, 0, width, height);
+
+            // Occasional screen tear effect
+            if (Math.random() < 0.01) {
+                const tearY = Math.random() * height;
+                const tearHeight = 5 + Math.random() * 20;
+                ctx.drawImage(canvas,
+                    0, tearY, width, tearHeight,
+                    (Math.random() - 0.5) * 20, tearY, width, tearHeight
+                );
+            }
+
+            // Update and draw entities
+            for (const entity of entities) {
+                entity.update();
+                entity.draw();
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+
+            // Occasionally spawn text
+            if (Math.random() < 0.03) {
+                showStrangeText(mouseX, mouseY);
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.back')) return;
+
+            // Spawn new strange entity
+            const entity = new StrangeEntity();
+            entity.x = e.clientX;
+            entity.y = e.clientY;
+            entities.push(entity);
+
+            // Keep array manageable
+            if (entities.length > 30) {
+                entities.shift();
+            }
+
+            // Burst of strange text
+            for (let i = 0; i < 3; i++) {
+                showStrangeText(
+                    e.clientX + (Math.random() - 0.5) * 100,
+                    e.clientY + (Math.random() - 0.5) * 100
+                );
+            }
+        });
+
+        function init() {
+            resize();
+            mouseX = width / 2;
+            mouseY = height / 2;
+
+            // Start with some strange entities
+            for (let i = 0; i < 10; i++) {
+                entities.push(new StrangeEntity());
+            }
+
+            draw();
+        }
+
+        window.addEventListener('resize', resize);
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>try · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            min-height: 100vh;
+            overflow: hidden;
+            font-family: 'Crimson Text', Georgia, serif;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            z-index: 100;
+        }
+
+        .back a {
+            color: #3a3a3a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #aa9a7a;
+        }
+
+        .title {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            color: #3a3a3a;
+            z-index: 100;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .target {
+            position: fixed;
+            width: 60px;
+            height: 60px;
+            border: 2px solid rgba(180, 160, 120, 0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: all 0.3s ease;
+            z-index: 5;
+        }
+
+        .target::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            background: rgba(180, 160, 120, 0.5);
+            border-radius: 50%;
+        }
+
+        .message {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            font-size: 1.2rem;
+            font-style: italic;
+            color: rgba(180, 160, 120, 0);
+            transition: color 1s ease;
+            max-width: 400px;
+            line-height: 1.8;
+            z-index: 10;
+        }
+
+        .message.visible {
+            color: rgba(180, 160, 120, 0.7);
+        }
+
+        .stats {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #4a4a3a;
+            text-align: center;
+        }
+
+        .info {
+            position: fixed;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #3a3a3a;
+        }
+    </style>
+</head>
+<body>
+    <div class="back"><a href="../index.html">← return</a></div>
+    <div class="title">try</div>
+    <canvas id="canvas"></canvas>
+    <div class="target" id="target"></div>
+    <div class="message" id="message"></div>
+    <div class="info">click the target · the trying is the point</div>
+    <div class="stats" id="stats"></div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const target = document.getElementById('target');
+        const messageEl = document.getElementById('message');
+        const statsEl = document.getElementById('stats');
+
+        let width, height;
+        let targetX, targetY;
+        let attempts = 0;
+        let hits = 0;
+        let trails = [];
+
+        const messages = {
+            hit: [
+                "you did it",
+                "this time it worked",
+                "success feels good",
+                "but the trying mattered more",
+                "💚",
+            ],
+            miss: [
+                "you tried",
+                "that's what matters",
+                "the attempt was real",
+                "trying is its own reward",
+                "keep going",
+                "every try teaches",
+                "failure is just trying",
+                "the effort counts",
+                "you're here, you're trying",
+                "that's enough",
+            ],
+            general: [
+                "the value is in the trying",
+                "not every attempt succeeds",
+                "but every attempt matters",
+                "trying is brave",
+                "trying is enough",
+            ]
+        };
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            moveTarget();
+        }
+
+        function moveTarget() {
+            targetX = 100 + Math.random() * (width - 200);
+            targetY = 100 + Math.random() * (height - 200);
+            target.style.left = targetX + 'px';
+            target.style.top = targetY + 'px';
+        }
+
+        function showMessage(type) {
+            const msgs = messages[type];
+            const msg = msgs[Math.floor(Math.random() * msgs.length)];
+            messageEl.textContent = msg;
+            messageEl.classList.add('visible');
+
+            setTimeout(() => {
+                messageEl.classList.remove('visible');
+            }, 2500);
+        }
+
+        function addTrail(x, y, hit) {
+            trails.push({
+                x, y,
+                hit,
+                alpha: 0.5,
+                size: hit ? 15 : 8
+            });
+        }
+
+        function draw() {
+            ctx.fillStyle = 'rgba(10, 10, 11, 0.05)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw trails
+            for (let i = trails.length - 1; i >= 0; i--) {
+                const t = trails[i];
+                t.alpha -= 0.002;
+
+                if (t.alpha <= 0) {
+                    trails.splice(i, 1);
+                    continue;
+                }
+
+                ctx.beginPath();
+                ctx.arc(t.x, t.y, t.size, 0, Math.PI * 2);
+
+                if (t.hit) {
+                    ctx.fillStyle = `rgba(120, 180, 120, ${t.alpha})`;
+                } else {
+                    ctx.fillStyle = `rgba(180, 160, 120, ${t.alpha * 0.5})`;
+                }
+                ctx.fill();
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.back')) return;
+
+            const clickX = e.clientX;
+            const clickY = e.clientY;
+
+            const dx = clickX - targetX;
+            const dy = clickY - targetY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            attempts++;
+
+            if (dist < 30) {
+                // Hit!
+                hits++;
+                addTrail(clickX, clickY, true);
+                showMessage('hit');
+                moveTarget();
+            } else {
+                // Miss
+                addTrail(clickX, clickY, false);
+                showMessage('miss');
+
+                // Target moves a little
+                if (Math.random() < 0.3) {
+                    moveTarget();
+                }
+            }
+
+            statsEl.textContent = `${attempts} attempts · ${hits} hits · ${attempts - hits} misses`;
+        });
+
+        // Occasional encouraging message
+        setInterval(() => {
+            if (Math.random() < 0.2 && attempts > 0) {
+                showMessage('general');
+            }
+        }, 8000);
+
+        resize();
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

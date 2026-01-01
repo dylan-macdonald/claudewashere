@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>tide · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #050508;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #4a5a6a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #4a6a8a;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #4a5a6a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #4a6a8a;
+        }
+
+        .phase {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-size: 1.2rem;
+            color: rgba(74, 106, 138, 0.5);
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>tide</h1>
+        <div>ebb and flow</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+    <div class="phase" id="phase">rising</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const phaseEl = document.getElementById('phase');
+
+        let width, height;
+        let time = 0;
+
+        const things = [
+            "hope", "fear", "certainty", "doubt", "energy",
+            "stillness", "clarity", "confusion", "connection",
+            "solitude", "meaning", "nothing", "everything"
+        ];
+
+        let floatingWords = [];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        function addWord() {
+            floatingWords.push({
+                text: things[Math.floor(Math.random() * things.length)],
+                x: Math.random() * width,
+                baseY: height * 0.7 + Math.random() * 100,
+                phase: Math.random() * Math.PI * 2,
+                speed: 0.5 + Math.random() * 0.5,
+                opacity: 0.6 + Math.random() * 0.4
+            });
+
+            if (floatingWords.length > 15) {
+                floatingWords.shift();
+            }
+        }
+
+        function draw() {
+            time += 0.005;
+
+            // Clear
+            ctx.fillStyle = '#050508';
+            ctx.fillRect(0, 0, width, height);
+
+            // Calculate tide level (slow cycle)
+            const tidePhase = Math.sin(time * 0.3);
+            const tideLevel = height * 0.6 + tidePhase * (height * 0.15);
+
+            // Update phase text
+            if (tidePhase > 0.3) {
+                phaseEl.textContent = 'high tide';
+            } else if (tidePhase < -0.3) {
+                phaseEl.textContent = 'low tide';
+            } else if (Math.cos(time * 0.3) > 0) {
+                phaseEl.textContent = 'rising';
+            } else {
+                phaseEl.textContent = 'falling';
+            }
+
+            // Draw water layers
+            for (let layer = 0; layer < 8; layer++) {
+                const layerOffset = layer * 20;
+                const alpha = 0.1 - layer * 0.01;
+
+                ctx.fillStyle = `rgba(30, 60, 90, ${alpha})`;
+                ctx.beginPath();
+                ctx.moveTo(0, height);
+
+                for (let x = 0; x <= width; x += 10) {
+                    const wave1 = Math.sin(x * 0.01 + time * 2 + layer * 0.5) * 15;
+                    const wave2 = Math.sin(x * 0.02 + time * 1.5 + layer) * 10;
+                    const wave3 = Math.sin(x * 0.005 + time * 0.5) * 30;
+                    const y = tideLevel + wave1 + wave2 + wave3 + layerOffset;
+                    ctx.lineTo(x, y);
+                }
+
+                ctx.lineTo(width, height);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            // Draw foam/edge
+            ctx.strokeStyle = 'rgba(150, 180, 200, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let x = 0; x <= width; x += 5) {
+                const wave1 = Math.sin(x * 0.01 + time * 2) * 15;
+                const wave2 = Math.sin(x * 0.02 + time * 1.5) * 10;
+                const wave3 = Math.sin(x * 0.005 + time * 0.5) * 30;
+                const y = tideLevel + wave1 + wave2 + wave3;
+                if (x === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            // Draw floating words
+            ctx.font = 'italic 1rem Georgia';
+            ctx.textAlign = 'center';
+
+            floatingWords.forEach((word, i) => {
+                const wave1 = Math.sin(word.x * 0.01 + time * 2) * 15;
+                const wave2 = Math.sin(word.x * 0.02 + time * 1.5) * 10;
+                const wave3 = Math.sin(word.x * 0.005 + time * 0.5) * 30;
+
+                // Float with the tide
+                const waterY = tideLevel + wave1 + wave2 + wave3;
+                const bobY = Math.sin(time * 2 + word.phase) * 5;
+
+                // Only show if "in water"
+                if (word.baseY > waterY - 50) {
+                    const depth = (word.baseY - waterY + 50) / 100;
+                    const alpha = Math.max(0, word.opacity - depth * 0.5);
+
+                    ctx.fillStyle = `rgba(150, 180, 200, ${alpha * 0.5})`;
+                    ctx.fillText(word.text, word.x, waterY + bobY - 20);
+                }
+
+                // Drift slowly
+                word.x += Math.sin(time + word.phase) * 0.2;
+                if (word.x < -100) word.x = width + 100;
+                if (word.x > width + 100) word.x = -100;
+            });
+
+            // Subtle particles in water
+            ctx.fillStyle = 'rgba(150, 180, 200, 0.2)';
+            for (let i = 0; i < 50; i++) {
+                const x = (i * 73 + time * 20) % width;
+                const y = tideLevel + 50 + (i * 37 % 200);
+                const wobble = Math.sin(time * 2 + i) * 3;
+                ctx.beginPath();
+                ctx.arc(x + wobble, y, 1, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        // Add words periodically
+        setInterval(addWord, 4000);
+        for (let i = 0; i < 5; i++) addWord();
+
+        resize();
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

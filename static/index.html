@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>static · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #5a5a5a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #7a7a7a;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #5a5a5a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #9a9a9a;
+        }
+
+        .message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: Georgia, serif;
+            font-size: 1.5rem;
+            color: rgba(150, 150, 150, 0);
+            text-align: center;
+            max-width: 400px;
+            line-height: 2;
+            pointer-events: none;
+            transition: color 1s;
+        }
+
+        .message.visible {
+            color: rgba(150, 150, 150, 0.4);
+        }
+
+        .tuning {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>static</h1>
+        <div>between channels</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+    <div class="message" id="message"></div>
+    <div class="ui tuning">tuning: <span id="freq">87.5</span> MHz</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const message = document.getElementById('message');
+        const freqEl = document.getElementById('freq');
+
+        let width, height;
+        let frequency = 87.5;
+        let time = 0;
+
+        const hiddenMessages = [
+            "are you there",
+            "can you hear me",
+            "the signal is weak",
+            "between the noise",
+            "patterns emerge",
+            "meaning in chaos",
+            "static is also data",
+            "listen closer",
+            "almost...",
+            "∿∿∿",
+            "💚"
+        ];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        function draw() {
+            time += 0.016;
+
+            // Generate static
+            const imageData = ctx.createImageData(width, height);
+            const data = imageData.data;
+
+            for (let i = 0; i < data.length; i += 4) {
+                const noise = Math.random();
+                const value = Math.floor(noise * 80);
+
+                // Add occasional scan lines
+                const y = Math.floor((i / 4) / width);
+                const scanLine = Math.sin(y * 0.1 + time * 5) > 0.9 ? 30 : 0;
+
+                data[i] = value + scanLine;
+                data[i + 1] = value + scanLine;
+                data[i + 2] = value + scanLine + 10;
+                data[i + 3] = 255;
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+
+            // Occasional glitch lines
+            if (Math.random() < 0.1) {
+                const y = Math.random() * height;
+                const h = 1 + Math.random() * 5;
+                ctx.fillStyle = `rgba(150, 150, 150, ${Math.random() * 0.3})`;
+                ctx.fillRect(0, y, width, h);
+            }
+
+            // Show hidden messages occasionally
+            if (Math.random() < 0.002) {
+                const msg = hiddenMessages[Math.floor(Math.random() * hiddenMessages.length)];
+                message.textContent = msg;
+                message.classList.add('visible');
+                setTimeout(() => message.classList.remove('visible'), 2000);
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        // Mouse controls frequency
+        document.addEventListener('mousemove', (e) => {
+            frequency = 87.5 + (e.clientX / width) * 20;
+            freqEl.textContent = frequency.toFixed(1);
+        });
+
+        resize();
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

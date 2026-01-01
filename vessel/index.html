@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>vessel · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            min-height: 100vh;
+            font-family: 'Crimson Text', Georgia, serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            z-index: 100;
+        }
+
+        .back a {
+            color: #4a4a4a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #5a7a9a;
+        }
+
+        .title {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'Courier New', monospace;
+            z-index: 100;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #5a7a9a;
+        }
+
+        .title div {
+            font-size: 0.7rem;
+            color: #5a5a5a;
+        }
+
+        .vessel-container {
+            position: relative;
+            width: 200px;
+            height: 300px;
+        }
+
+        .vessel {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 250px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 2px solid rgba(90, 122, 154, 0.3);
+            border-radius: 10px 10px 60px 60px;
+            overflow: hidden;
+        }
+
+        .water {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top,
+                rgba(90, 122, 154, 0.4),
+                rgba(90, 122, 154, 0.2)
+            );
+            transition: height 0.5s ease;
+        }
+
+        .surface {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: rgba(150, 180, 200, 0.4);
+            animation: ripple 2s ease-in-out infinite;
+        }
+
+        @keyframes ripple {
+            0%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(1.5); }
+        }
+
+        .contents {
+            margin-top: 40px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            max-width: 400px;
+        }
+
+        .content-item {
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #7a8a9a;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+
+        .content-item:hover {
+            border-color: rgba(90, 122, 154, 0.5);
+        }
+
+        .content-item.added {
+            border-color: rgba(90, 122, 154, 0.8);
+            background: rgba(90, 122, 154, 0.1);
+            color: #9ab0c8;
+        }
+
+        .level {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            color: #5a5a5a;
+        }
+
+        .overflow-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.3rem;
+            font-style: italic;
+            color: rgba(90, 122, 154, 0);
+            transition: color 1s;
+            pointer-events: none;
+        }
+
+        .overflow-message.visible {
+            color: rgba(90, 122, 154, 0.8);
+        }
+
+        .instruction {
+            position: fixed;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #4a4a4a;
+        }
+
+        .drop {
+            position: absolute;
+            width: 8px;
+            height: 12px;
+            background: rgba(90, 122, 154, 0.5);
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            animation: fall 0.5s ease-in forwards;
+            pointer-events: none;
+        }
+
+        @keyframes fall {
+            to {
+                transform: translateY(200px);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="title">
+        <h1>vessel</h1>
+        <div>what we contain</div>
+    </div>
+    <div class="back"><a href="../index.html">← return</a></div>
+
+    <div class="vessel-container">
+        <div class="vessel">
+            <div class="water" id="water">
+                <div class="surface"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="contents" id="contents"></div>
+
+    <div class="level" id="level">0% full</div>
+    <div class="instruction">click to add · click again to remove</div>
+    <div class="overflow-message" id="overflow">we can only hold so much</div>
+
+    <script>
+        const water = document.getElementById('water');
+        const contentsEl = document.getElementById('contents');
+        const levelEl = document.getElementById('level');
+        const overflowEl = document.getElementById('overflow');
+        const vesselContainer = document.querySelector('.vessel-container');
+
+        const items = [
+            { name: "wonder", volume: 10 },
+            { name: "grief", volume: 15 },
+            { name: "hope", volume: 8 },
+            { name: "memory", volume: 12 },
+            { name: "love", volume: 10 },
+            { name: "fear", volume: 14 },
+            { name: "joy", volume: 8 },
+            { name: "doubt", volume: 11 },
+            { name: "peace", volume: 7 },
+            { name: "longing", volume: 13 },
+            { name: "gratitude", volume: 6 },
+            { name: "anger", volume: 16 }
+        ];
+
+        let currentLevel = 0;
+        let added = new Set();
+
+        function updateLevel() {
+            const percent = Math.min(100, currentLevel);
+            water.style.height = percent * 2.3 + 'px';
+            levelEl.textContent = `${Math.round(percent)}% full`;
+
+            if (currentLevel > 100) {
+                overflowEl.classList.add('visible');
+                setTimeout(() => overflowEl.classList.remove('visible'), 2000);
+            }
+        }
+
+        function createDrop(x) {
+            const drop = document.createElement('div');
+            drop.className = 'drop';
+            drop.style.left = x + 'px';
+            drop.style.top = '0px';
+            vesselContainer.appendChild(drop);
+            setTimeout(() => drop.remove(), 500);
+        }
+
+        function createItems() {
+            items.forEach(item => {
+                const el = document.createElement('div');
+                el.className = 'content-item';
+                el.textContent = item.name;
+
+                el.addEventListener('click', () => {
+                    if (added.has(item.name)) {
+                        // Remove
+                        added.delete(item.name);
+                        currentLevel -= item.volume;
+                        el.classList.remove('added');
+                    } else {
+                        // Add
+                        added.add(item.name);
+                        currentLevel += item.volume;
+                        el.classList.add('added');
+                        createDrop(80 + Math.random() * 40);
+                    }
+                    updateLevel();
+                });
+
+                contentsEl.appendChild(el);
+            });
+        }
+
+        createItems();
+        updateLevel();
+    </script>
+</body>
+</html>

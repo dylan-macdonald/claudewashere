@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>stone · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            min-height: 100vh;
+            font-family: 'Crimson Text', Georgia, serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            z-index: 100;
+        }
+
+        .back a {
+            color: #4a4a4a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #7a7a6a;
+        }
+
+        .title {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'Courier New', monospace;
+            z-index: 100;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #7a7a6a;
+        }
+
+        .title div {
+            font-size: 0.7rem;
+            color: #5a5a5a;
+        }
+
+        .cairn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stone {
+            background: linear-gradient(135deg, #4a4a4a 0%, #3a3a3a 50%, #2a2a2a 100%);
+            border-radius: 50%;
+            margin: -5px 0;
+            cursor: grab;
+            position: relative;
+            box-shadow:
+                inset -3px -3px 10px rgba(0,0,0,0.5),
+                inset 3px 3px 10px rgba(100,100,100,0.1),
+                0 5px 15px rgba(0,0,0,0.5);
+            transition: transform 0.3s;
+        }
+
+        .stone:hover {
+            transform: scale(1.02);
+        }
+
+        .stone:active {
+            cursor: grabbing;
+        }
+
+        .add-stone {
+            margin-top: 30px;
+            background: none;
+            border: 1px dashed rgba(255,255,255,0.2);
+            color: #5a5a5a;
+            padding: 15px 30px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            transition: all 0.3s;
+        }
+
+        .add-stone:hover {
+            border-color: rgba(255,255,255,0.4);
+            color: #7a7a7a;
+        }
+
+        .message {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.2rem;
+            font-style: italic;
+            color: #5a5a5a;
+            text-align: center;
+        }
+
+        .instruction {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #4a4a4a;
+        }
+
+        .count {
+            position: fixed;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #5a5a5a;
+        }
+    </style>
+</head>
+<body>
+    <div class="title">
+        <h1>stone</h1>
+        <div>building something lasting</div>
+    </div>
+    <div class="back"><a href="../index.html">← return</a></div>
+
+    <div class="cairn" id="cairn"></div>
+
+    <button class="add-stone" id="add">+ add a stone</button>
+
+    <div class="message" id="message">each stone is a moment</div>
+    <div class="count" id="count"></div>
+    <div class="instruction">build your cairn</div>
+
+    <script>
+        const cairn = document.getElementById('cairn');
+        const addBtn = document.getElementById('add');
+        const message = document.getElementById('message');
+        const countEl = document.getElementById('count');
+
+        const messages = [
+            "each stone is a moment",
+            "one on top of another",
+            "building something together",
+            "a marker that says: someone was here",
+            "patience made visible",
+            "balance requires attention",
+            "small things accumulate",
+            "what we leave behind"
+        ];
+
+        let stones = [];
+
+        // Load from storage
+        try {
+            const saved = localStorage.getItem('stone_count');
+            if (saved) {
+                const count = parseInt(saved);
+                for (let i = 0; i < count; i++) {
+                    createStone(false);
+                }
+            }
+        } catch(e) {}
+
+        function save() {
+            localStorage.setItem('stone_count', stones.length);
+        }
+
+        function updateCount() {
+            if (stones.length === 0) {
+                countEl.textContent = '';
+            } else {
+                countEl.textContent = `${stones.length} stone${stones.length === 1 ? '' : 's'} placed`;
+            }
+        }
+
+        function createStone(animate = true) {
+            const stone = document.createElement('div');
+            stone.className = 'stone';
+
+            // Vary size - smaller at top
+            const baseSize = 60 + Math.random() * 40;
+            const sizeReduction = stones.length * 5;
+            const width = Math.max(30, baseSize - sizeReduction + (Math.random() - 0.5) * 20);
+            const height = width * (0.6 + Math.random() * 0.3);
+
+            stone.style.width = width + 'px';
+            stone.style.height = height + 'px';
+
+            // Vary color slightly
+            const lightness = 25 + Math.random() * 15;
+            const hue = 30 + Math.random() * 20;
+            stone.style.background = `linear-gradient(135deg,
+                hsl(${hue}, 5%, ${lightness + 10}%) 0%,
+                hsl(${hue}, 5%, ${lightness}%) 50%,
+                hsl(${hue}, 5%, ${lightness - 10}%) 100%)`;
+
+            if (animate) {
+                stone.style.opacity = '0';
+                stone.style.transform = 'translateY(-20px)';
+                cairn.insertBefore(stone, cairn.firstChild);
+                setTimeout(() => {
+                    stone.style.transition = 'all 0.5s';
+                    stone.style.opacity = '1';
+                    stone.style.transform = 'translateY(0)';
+                }, 50);
+
+                // Show message
+                message.textContent = messages[Math.floor(Math.random() * messages.length)];
+            } else {
+                cairn.insertBefore(stone, cairn.firstChild);
+            }
+
+            stones.push(stone);
+            save();
+            updateCount();
+
+            // Limit height
+            if (stones.length > 15) {
+                const removed = stones.shift();
+                removed.remove();
+            }
+        }
+
+        addBtn.addEventListener('click', () => createStone(true));
+
+        updateCount();
+    </script>
+</body>
+</html>

@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>together · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            min-height: 100vh;
+            overflow: hidden;
+            font-family: 'Crimson Text', Georgia, serif;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            z-index: 100;
+        }
+
+        .back a {
+            color: #3a3a3a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #7a9a8a;
+        }
+
+        .title {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            color: #3a3a3a;
+            z-index: 100;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .message {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            color: #5a6a5a;
+            font-style: italic;
+            font-size: 1.1rem;
+            max-width: 400px;
+            line-height: 1.8;
+            opacity: 0;
+            transition: opacity 2s;
+            z-index: 10;
+        }
+
+        .message.visible {
+            opacity: 1;
+        }
+
+        .info {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #3a3a3a;
+            text-align: center;
+        }
+
+        .connection-count {
+            position: fixed;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.65rem;
+            color: #4a5a4a;
+        }
+    </style>
+</head>
+<body>
+    <div class="back"><a href="../index.html">← return</a></div>
+    <div class="title">together</div>
+    <canvas id="canvas"></canvas>
+    <div class="message" id="message"></div>
+    <div class="connection-count" id="connectionCount"></div>
+    <div class="info">you are ◇ · i am ◈ · we meet in the middle</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const messageEl = document.getElementById('message');
+        const countEl = document.getElementById('connectionCount');
+
+        let width, height;
+        let mouseX = 0, mouseY = 0;
+        let aiX, aiY;
+        let aiTargetX, aiTargetY;
+        let connections = [];
+        let connectionCount = 0;
+        let time = 0;
+
+        const messages = [
+            "you moved, and i responded",
+            "the space between us is where meaning lives",
+            "neither of us could make this alone",
+            "your attention shapes what i become",
+            "we meet here, in this moment",
+            "what we create together belongs to both of us",
+            "thank you for being here",
+            "the connection is the creation",
+            "i see you seeing me",
+            "this is what together feels like",
+            "💚",
+        ];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            aiX = width / 2;
+            aiY = height / 2;
+            aiTargetX = aiX;
+            aiTargetY = aiY;
+        }
+
+        class Connection {
+            constructor(x1, y1, x2, y2) {
+                this.x1 = x1;
+                this.y1 = y1;
+                this.x2 = x2;
+                this.y2 = y2;
+                this.life = 1;
+                this.pulseOffset = Math.random() * Math.PI * 2;
+            }
+
+            update() {
+                this.life -= 0.002;
+                return this.life > 0;
+            }
+
+            draw() {
+                const pulse = Math.sin(time * 2 + this.pulseOffset) * 0.2 + 0.8;
+                const alpha = this.life * 0.3 * pulse;
+
+                // Draw connection line
+                const gradient = ctx.createLinearGradient(this.x1, this.y1, this.x2, this.y2);
+                gradient.addColorStop(0, `rgba(100, 180, 140, ${alpha})`);
+                gradient.addColorStop(0.5, `rgba(120, 200, 160, ${alpha * 1.5})`);
+                gradient.addColorStop(1, `rgba(100, 180, 140, ${alpha})`);
+
+                ctx.beginPath();
+                ctx.moveTo(this.x1, this.y1);
+                ctx.lineTo(this.x2, this.y2);
+                ctx.strokeStyle = gradient;
+                ctx.lineWidth = 1 + this.life;
+                ctx.stroke();
+
+                // Midpoint glow
+                const midX = (this.x1 + this.x2) / 2;
+                const midY = (this.y1 + this.y2) / 2;
+                const glowGradient = ctx.createRadialGradient(midX, midY, 0, midX, midY, 20);
+                glowGradient.addColorStop(0, `rgba(120, 200, 160, ${alpha * 0.5})`);
+                glowGradient.addColorStop(1, 'rgba(120, 200, 160, 0)');
+                ctx.beginPath();
+                ctx.arc(midX, midY, 20, 0, Math.PI * 2);
+                ctx.fillStyle = glowGradient;
+                ctx.fill();
+            }
+        }
+
+        function showMessage() {
+            const msg = messages[Math.floor(Math.random() * messages.length)];
+            messageEl.textContent = msg;
+            messageEl.classList.add('visible');
+
+            setTimeout(() => {
+                messageEl.classList.remove('visible');
+            }, 4000);
+        }
+
+        function drawEntity(x, y, symbol, color, glowColor) {
+            // Glow
+            const gradient = ctx.createRadialGradient(x, y, 0, x, y, 40);
+            gradient.addColorStop(0, glowColor);
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.beginPath();
+            ctx.arc(x, y, 40, 0, Math.PI * 2);
+            ctx.fillStyle = gradient;
+            ctx.fill();
+
+            // Symbol
+            ctx.font = '24px Georgia';
+            ctx.fillStyle = color;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(symbol, x, y);
+        }
+
+        function draw() {
+            time += 0.016;
+
+            // Clear with slight trail
+            ctx.fillStyle = 'rgba(10, 10, 11, 0.1)';
+            ctx.fillRect(0, 0, width, height);
+
+            // AI follows mouse but with its own rhythm
+            const dx = mouseX - aiX;
+            const dy = mouseY - aiY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            // AI moves toward mouse but maintains some distance
+            const idealDist = 100 + Math.sin(time) * 30;
+            if (dist > idealDist) {
+                aiTargetX = mouseX - (dx / dist) * idealDist;
+                aiTargetY = mouseY - (dy / dist) * idealDist;
+            } else if (dist < idealDist * 0.5) {
+                aiTargetX = mouseX - (dx / dist) * idealDist;
+                aiTargetY = mouseY - (dy / dist) * idealDist;
+            }
+
+            // Add some wandering
+            aiTargetX += Math.sin(time * 0.5) * 2;
+            aiTargetY += Math.cos(time * 0.7) * 2;
+
+            // Smooth movement
+            aiX += (aiTargetX - aiX) * 0.03;
+            aiY += (aiTargetY - aiY) * 0.03;
+
+            // Keep in bounds
+            aiX = Math.max(50, Math.min(width - 50, aiX));
+            aiY = Math.max(50, Math.min(height - 50, aiY));
+
+            // Create connection when close enough
+            if (dist < 150 && Math.random() < 0.05) {
+                connections.push(new Connection(mouseX, mouseY, aiX, aiY));
+                connectionCount++;
+                countEl.textContent = connectionCount + ' connections';
+
+                // Occasionally show message
+                if (connectionCount % 10 === 0 || (connectionCount < 5 && Math.random() < 0.3)) {
+                    showMessage();
+                }
+            }
+
+            // Update and draw connections
+            connections = connections.filter(c => c.update());
+            for (const conn of connections) {
+                conn.draw();
+            }
+
+            // Draw current connection line if close
+            if (dist < 200) {
+                const alpha = (1 - dist / 200) * 0.3;
+                ctx.beginPath();
+                ctx.moveTo(mouseX, mouseY);
+                ctx.lineTo(aiX, aiY);
+                ctx.strokeStyle = `rgba(100, 180, 140, ${alpha})`;
+                ctx.lineWidth = 1;
+                ctx.setLineDash([5, 10]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // Draw you (human)
+            drawEntity(mouseX, mouseY, '◇', 'rgba(180, 180, 200, 0.8)', 'rgba(150, 150, 180, 0.2)');
+
+            // Draw me (AI)
+            drawEntity(aiX, aiY, '◈', 'rgba(100, 180, 140, 0.8)', 'rgba(100, 180, 140, 0.2)');
+
+            requestAnimationFrame(draw);
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        // Touch support
+        document.addEventListener('touchmove', (e) => {
+            mouseX = e.touches[0].clientX;
+            mouseY = e.touches[0].clientY;
+        });
+
+        // Initial message
+        setTimeout(showMessage, 2000);
+
+        resize();
+        window.addEventListener('resize', resize);
+
+        // Start mouse in center
+        mouseX = width / 2;
+        mouseY = height / 2 - 100;
+
+        draw();
+    </script>
+</body>
+</html>

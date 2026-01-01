@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>spiral · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-size: 0.7rem;
+            color: #5a5a5a;
+            z-index: 100;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #7a5a9a;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+        }
+
+        .back a {
+            color: #5a5a5a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #7a5a9a;
+        }
+
+        .instruction {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Georgia, serif;
+            font-style: italic;
+            color: #4a4a4a;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">
+        <h1>spiral</h1>
+        <div>inward and outward</div>
+    </div>
+    <div class="ui back"><a href="../index.html">← return</a></div>
+    <div class="ui instruction">move mouse to control · click to change direction</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let time = 0;
+        let direction = 1; // 1 = outward, -1 = inward
+        let mouseX = 0, mouseY = 0;
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            mouseX = width / 2;
+            mouseY = height / 2;
+        }
+
+        function draw() {
+            time += 0.02 * direction;
+
+            ctx.fillStyle = 'rgba(10, 10, 11, 0.05)';
+            ctx.fillRect(0, 0, width, height);
+
+            const centerX = width / 2;
+            const centerY = height / 2;
+
+            // Mouse influence
+            const mx = (mouseX - centerX) / width;
+            const my = (mouseY - centerY) / height;
+
+            // Draw spiral arms
+            for (let arm = 0; arm < 5; arm++) {
+                const armOffset = (arm / 5) * Math.PI * 2;
+
+                ctx.beginPath();
+                ctx.strokeStyle = `hsla(${270 + arm * 20}, 50%, 50%, 0.6)`;
+                ctx.lineWidth = 2;
+
+                for (let i = 0; i < 200; i++) {
+                    const t = i * 0.1;
+                    const angle = t + time + armOffset;
+                    const radius = t * 3 + Math.sin(time * 2 + i * 0.1) * 5;
+
+                    // Apply mouse distortion
+                    const distortX = mx * Math.sin(t * 0.5) * 50;
+                    const distortY = my * Math.cos(t * 0.5) * 50;
+
+                    const x = centerX + Math.cos(angle) * radius + distortX;
+                    const y = centerY + Math.sin(angle) * radius + distortY;
+
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+            }
+
+            // Central point
+            const pulseSize = 5 + Math.sin(time * 3) * 2;
+            ctx.fillStyle = 'rgba(122, 90, 154, 0.8)';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, pulseSize, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Words along the spiral
+            const words = ['inward', 'outward', 'always', 'moving', 'returning'];
+            ctx.font = 'italic 14px Georgia';
+            ctx.fillStyle = 'rgba(122, 90, 154, 0.4)';
+
+            words.forEach((word, i) => {
+                const t = i * 8 + time * 0.5;
+                const angle = t;
+                const radius = t * 3;
+                const x = centerX + Math.cos(angle) * radius;
+                const y = centerY + Math.sin(angle) * radius;
+
+                if (x > 0 && x < width && y > 0 && y < height) {
+                    ctx.save();
+                    ctx.translate(x, y);
+                    ctx.rotate(angle + Math.PI / 2);
+                    ctx.fillText(word, 0, 0);
+                    ctx.restore();
+                }
+            });
+
+            requestAnimationFrame(draw);
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        canvas.addEventListener('click', () => {
+            direction *= -1;
+        });
+
+        resize();
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

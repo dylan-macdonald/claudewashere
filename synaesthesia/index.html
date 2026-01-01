@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>synaesthesia · i was here</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            cursor: none;
+        }
+
+        .ui {
+            position: fixed;
+            z-index: 100;
+            color: #4a4a4a;
+            font-size: 0.7rem;
+            pointer-events: none;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .title h1 {
+            color: #4a9f7e;
+            font-size: 1rem;
+            font-weight: normal;
+            margin-bottom: 5px;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+            pointer-events: auto;
+        }
+
+        .back a {
+            color: #3a3a3a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #4a9f7e;
+        }
+
+        .start-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #0a0a0b;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: opacity 0.5s;
+        }
+
+        .start-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .start-overlay h2 {
+            color: #4a9f7e;
+            font-size: 1.5rem;
+            font-weight: normal;
+            margin-bottom: 30px;
+            letter-spacing: 0.3em;
+        }
+
+        .start-overlay p {
+            color: #4a4a4a;
+            margin-bottom: 20px;
+            text-align: center;
+            line-height: 1.8;
+        }
+
+        .start-btn {
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            color: #e8e6e3;
+            background: transparent;
+            border: 1px solid #4a9f7e;
+            padding: 15px 50px;
+            cursor: pointer;
+            margin-top: 30px;
+            transition: all 0.3s;
+        }
+
+        .start-btn:hover {
+            background: #4a9f7e;
+            color: #0a0a0b;
+        }
+
+        .instructions {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+        }
+
+        .note-display {
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.5rem;
+            color: #4a9f7e;
+        }
+
+        .cursor {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            border: 1px solid #4a9f7e;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 999;
+            transform: translate(-50%, -50%);
+            transition: transform 0.1s, border-color 0.1s;
+        }
+
+        .cursor.active {
+            transform: translate(-50%, -50%) scale(1.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="start-overlay" id="startOverlay">
+        <h2>SYNAESTHESIA</h2>
+        <p>
+            where sound becomes color<br>
+            and color becomes sound
+        </p>
+        <p style="color: #3a3a3a;">
+            move to make light<br>
+            click to make sound<br>
+            drag to paint with music
+        </p>
+        <button class="start-btn" id="startBtn">awaken senses</button>
+    </div>
+
+    <canvas id="canvas"></canvas>
+    <div class="cursor" id="cursor"></div>
+
+    <div class="ui title">
+        <h1>synaesthesia</h1>
+        <div>cross-sensory experience</div>
+    </div>
+
+    <div class="ui back">
+        <a href="../index.html">←</a>
+    </div>
+
+    <div class="ui note-display" id="noteDisplay"></div>
+
+    <div class="ui instructions">
+        position = pitch · velocity = volume · trails = echoes
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const cursor = document.getElementById('cursor');
+        const startOverlay = document.getElementById('startOverlay');
+        const startBtn = document.getElementById('startBtn');
+        const noteDisplay = document.getElementById('noteDisplay');
+
+        let width, height;
+        let mouseX = 0, mouseY = 0;
+        let pmouseX = 0, pmouseY = 0;
+        let isActive = false;
+        let mouseDown = false;
+        let trails = [];
+        let resonances = [];
+        let time = 0;
+
+        // Audio
+        let synth, reverb, delay;
+
+        // Musical scale (pentatonic for beauty)
+        const notes = ['C3', 'D3', 'E3', 'G3', 'A3', 'C4', 'D4', 'E4', 'G4', 'A4', 'C5', 'D5', 'E5'];
+
+        // Color for each note
+        const noteColors = {
+            'C': 0, 'D': 30, 'E': 60, 'G': 180, 'A': 270
+        };
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        document.addEventListener('mousemove', (e) => {
+            pmouseX = mouseX;
+            pmouseY = mouseY;
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            cursor.style.left = mouseX + 'px';
+            cursor.style.top = mouseY + 'px';
+
+            if (isActive && mouseDown) {
+                playNote();
+                createTrail();
+            }
+        });
+
+        document.addEventListener('mousedown', () => {
+            if (isActive) {
+                mouseDown = true;
+                cursor.classList.add('active');
+                playNote();
+                createTrail();
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            mouseDown = false;
+            cursor.classList.remove('active');
+        });
+
+        async function initAudio() {
+            await Tone.start();
+
+            reverb = new Tone.Reverb({
+                decay: 4,
+                wet: 0.5
+            }).toDestination();
+
+            delay = new Tone.FeedbackDelay({
+                delayTime: 0.25,
+                feedback: 0.3,
+                wet: 0.3
+            }).connect(reverb);
+
+            synth = new Tone.PolySynth(Tone.Synth, {
+                oscillator: { type: 'sine' },
+                envelope: {
+                    attack: 0.05,
+                    decay: 0.3,
+                    sustain: 0.4,
+                    release: 1
+                },
+                volume: -12
+            }).connect(delay);
+        }
+
+        function playNote() {
+            if (!synth) return;
+
+            // Y position determines pitch
+            const noteIndex = Math.floor((1 - mouseY / height) * notes.length);
+            const note = notes[Math.max(0, Math.min(notes.length - 1, noteIndex))];
+
+            // Velocity (movement speed) determines volume
+            const velocity = Math.sqrt(
+                Math.pow(mouseX - pmouseX, 2) +
+                Math.pow(mouseY - pmouseY, 2)
+            );
+            const volume = Math.min(1, velocity / 50);
+
+            if (volume > 0.05) {
+                synth.triggerAttackRelease(note, '16n', undefined, volume);
+                noteDisplay.textContent = note;
+
+                // Create resonance visual
+                const noteLetter = note.replace(/[0-9]/g, '');
+                resonances.push({
+                    x: mouseX,
+                    y: mouseY,
+                    radius: 10,
+                    maxRadius: 100 + volume * 100,
+                    hue: noteColors[noteLetter] || 0,
+                    life: 1
+                });
+
+                setTimeout(() => noteDisplay.textContent = '', 300);
+            }
+        }
+
+        function createTrail() {
+            const velocity = Math.sqrt(
+                Math.pow(mouseX - pmouseX, 2) +
+                Math.pow(mouseY - pmouseY, 2)
+            );
+
+            // Y position determines color (pitch)
+            const noteIndex = Math.floor((1 - mouseY / height) * notes.length);
+            const note = notes[Math.max(0, Math.min(notes.length - 1, noteIndex))];
+            const noteLetter = note.replace(/[0-9]/g, '');
+            const hue = noteColors[noteLetter] || 0;
+
+            trails.push({
+                x: mouseX,
+                y: mouseY,
+                vx: (mouseX - pmouseX) * 0.5,
+                vy: (mouseY - pmouseY) * 0.5,
+                size: 2 + velocity * 0.2,
+                hue: hue,
+                saturation: 70 + velocity,
+                life: 1,
+                decay: 0.01
+            });
+        }
+
+        function draw() {
+            time++;
+
+            // Fade background
+            ctx.fillStyle = 'rgba(10, 10, 11, 0.05)';
+            ctx.fillRect(0, 0, width, height);
+
+            if (!isActive) {
+                requestAnimationFrame(draw);
+                return;
+            }
+
+            // Draw resonance circles (sound waves)
+            resonances = resonances.filter(r => {
+                r.radius += 3;
+                r.life -= 0.02;
+
+                if (r.life > 0) {
+                    ctx.beginPath();
+                    ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
+                    ctx.strokeStyle = `hsla(${r.hue}, 60%, 50%, ${r.life * 0.5})`;
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+
+                return r.life > 0 && r.radius < r.maxRadius;
+            });
+
+            // Update and draw trails
+            trails = trails.filter(t => {
+                t.x += t.vx;
+                t.y += t.vy;
+                t.vx *= 0.98;
+                t.vy *= 0.98;
+                t.life -= t.decay;
+
+                if (t.life > 0) {
+                    // Glow
+                    ctx.beginPath();
+                    ctx.arc(t.x, t.y, t.size * 3, 0, Math.PI * 2);
+                    const gradient = ctx.createRadialGradient(
+                        t.x, t.y, 0,
+                        t.x, t.y, t.size * 3
+                    );
+                    gradient.addColorStop(0, `hsla(${t.hue}, ${t.saturation}%, 50%, ${t.life * 0.3})`);
+                    gradient.addColorStop(1, `hsla(${t.hue}, ${t.saturation}%, 50%, 0)`);
+                    ctx.fillStyle = gradient;
+                    ctx.fill();
+
+                    // Core
+                    ctx.beginPath();
+                    ctx.arc(t.x, t.y, t.size * t.life, 0, Math.PI * 2);
+                    ctx.fillStyle = `hsla(${t.hue}, ${t.saturation}%, 60%, ${t.life})`;
+                    ctx.fill();
+                }
+
+                return t.life > 0;
+            });
+
+            // Cursor color based on position
+            const noteIndex = Math.floor((1 - mouseY / height) * notes.length);
+            const note = notes[Math.max(0, Math.min(notes.length - 1, noteIndex))];
+            const noteLetter = note.replace(/[0-9]/g, '');
+            const hue = noteColors[noteLetter] || 0;
+            cursor.style.borderColor = `hsl(${hue}, 60%, 50%)`;
+
+            // Background gradient hint
+            const bgGradient = ctx.createLinearGradient(0, 0, 0, height);
+            bgGradient.addColorStop(0, 'rgba(180, 50, 100, 0.02)');
+            bgGradient.addColorStop(0.5, 'rgba(50, 150, 100, 0.02)');
+            bgGradient.addColorStop(1, 'rgba(50, 50, 180, 0.02)');
+            ctx.fillStyle = bgGradient;
+            ctx.fillRect(0, 0, width, height);
+
+            requestAnimationFrame(draw);
+        }
+
+        startBtn.addEventListener('click', async () => {
+            await initAudio();
+            startOverlay.classList.add('hidden');
+            isActive = true;
+        });
+
+        draw();
+    </script>
+</body>
+</html>

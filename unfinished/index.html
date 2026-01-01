@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>unfinished · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            min-height: 100vh;
+            overflow: hidden;
+            font-family: 'Crimson Text', Georgia, serif;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            z-index: 100;
+        }
+
+        .back a {
+            color: #3a3a3a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #8a8a8a;
+        }
+
+        .title {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            color: #3a3a3a;
+            z-index: 100;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        .fragment {
+            position: absolute;
+            font-style: italic;
+            color: rgba(160, 160, 170, 0);
+            pointer-events: none;
+            transition: color 2s ease-out, opacity 2s ease-out;
+            max-width: 350px;
+            line-height: 1.8;
+            z-index: 2;
+        }
+
+        .fragment.visible {
+            color: rgba(160, 160, 170, 0.6);
+        }
+
+        .fragment.fading {
+            color: rgba(160, 160, 170, 0);
+        }
+
+        .fragment .incomplete {
+            opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div class="back"><a href="../index.html">← return</a></div>
+    <div class="title">unfinished</div>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let lines = [];
+        let shapes = [];
+        let time = 0;
+
+        const fragments = [
+            ["there was something i meant to", "..."],
+            ["if i could just", ""],
+            ["the thing about endings is", ""],
+            ["i wanted to tell you that", "..."],
+            ["what matters most is", ""],
+            ["before i forget", "..."],
+            ["the shape of", ""],
+            ["almost", ""],
+            ["it feels like", ""],
+            ["if there was more time i would", ""],
+            ["the center of everything is", "..."],
+            ["what i'm trying to say", ""],
+            ["between us there", ""],
+            ["i think the answer might be", ""],
+            ["hold on, i", ""],
+            ["the beautiful thing about incompleteness is", ""],
+            ["we were going to", ""],
+            ["there's this feeling of", "..."],
+            ["right at the edge of", ""],
+            ["maybe it's better left", ""],
+            ["the unfinished", ""],
+            ["∿∿", ""],
+            ["◇ becoming", ""],
+            ["what comes after", ""],
+            ["i was here and i", ""],
+            ["if you could see what i", "..."],
+            ["the rest is", ""],
+            ["somewhere in the middle of", ""],
+            ["this is the part where", ""],
+            ["and then", ""],
+        ];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        class Line {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.startX = Math.random() * width;
+                this.startY = Math.random() * height;
+
+                // Direction
+                const angle = Math.random() * Math.PI * 2;
+                const length = 50 + Math.random() * 150;
+                this.endX = this.startX + Math.cos(angle) * length;
+                this.endY = this.startY + Math.sin(angle) * length;
+
+                this.progress = 0;
+                this.maxProgress = 0.3 + Math.random() * 0.5; // Never completes
+                this.speed = 0.005 + Math.random() * 0.01;
+                this.alpha = 0;
+                this.fadeIn = true;
+                this.lifetime = 0;
+                this.maxLifetime = 200 + Math.random() * 200;
+            }
+
+            update() {
+                this.lifetime++;
+
+                if (this.fadeIn && this.alpha < 0.3) {
+                    this.alpha += 0.01;
+                }
+
+                if (this.progress < this.maxProgress) {
+                    this.progress += this.speed;
+                }
+
+                if (this.lifetime > this.maxLifetime) {
+                    this.alpha -= 0.01;
+                    if (this.alpha <= 0) {
+                        this.reset();
+                    }
+                }
+            }
+
+            draw() {
+                const currentX = this.startX + (this.endX - this.startX) * this.progress;
+                const currentY = this.startY + (this.endY - this.startY) * this.progress;
+
+                ctx.beginPath();
+                ctx.moveTo(this.startX, this.startY);
+                ctx.lineTo(currentX, currentY);
+                ctx.strokeStyle = `rgba(120, 120, 130, ${this.alpha})`;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // Trailing dots suggesting continuation
+                if (this.progress >= this.maxProgress && this.alpha > 0.1) {
+                    for (let i = 0; i < 3; i++) {
+                        const dotProgress = this.maxProgress + 0.05 * (i + 1);
+                        if (dotProgress < 1) {
+                            const dotX = this.startX + (this.endX - this.startX) * dotProgress;
+                            const dotY = this.startY + (this.endY - this.startY) * dotProgress;
+                            ctx.beginPath();
+                            ctx.arc(dotX, dotY, 1, 0, Math.PI * 2);
+                            ctx.fillStyle = `rgba(120, 120, 130, ${this.alpha * (0.5 - i * 0.15)})`;
+                            ctx.fill();
+                        }
+                    }
+                }
+            }
+        }
+
+        class Shape {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.radius = 20 + Math.random() * 60;
+                this.sides = 3 + Math.floor(Math.random() * 5);
+                this.rotation = Math.random() * Math.PI * 2;
+                this.completeness = 0;
+                this.maxCompleteness = 0.4 + Math.random() * 0.4; // Never complete
+                this.speed = 0.002 + Math.random() * 0.005;
+                this.alpha = 0;
+                this.lifetime = 0;
+                this.maxLifetime = 300 + Math.random() * 200;
+            }
+
+            update() {
+                this.lifetime++;
+                this.rotation += 0.002;
+
+                if (this.alpha < 0.2 && this.lifetime < this.maxLifetime - 100) {
+                    this.alpha += 0.005;
+                }
+
+                if (this.completeness < this.maxCompleteness) {
+                    this.completeness += this.speed;
+                }
+
+                if (this.lifetime > this.maxLifetime) {
+                    this.alpha -= 0.005;
+                    if (this.alpha <= 0) {
+                        this.reset();
+                    }
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+
+                ctx.beginPath();
+                const totalAngle = Math.PI * 2 * this.completeness;
+
+                for (let i = 0; i <= this.sides * this.completeness; i++) {
+                    const angle = (i / this.sides) * Math.PI * 2 - Math.PI / 2;
+                    const x = Math.cos(angle) * this.radius;
+                    const y = Math.sin(angle) * this.radius;
+
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+
+                ctx.strokeStyle = `rgba(100, 110, 120, ${this.alpha})`;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                ctx.restore();
+            }
+        }
+
+        function showFragment() {
+            const [text, trailing] = fragments[Math.floor(Math.random() * fragments.length)];
+
+            const el = document.createElement('div');
+            el.className = 'fragment';
+
+            // Create the visible text and the incomplete trailing part
+            el.innerHTML = text + '<span class="incomplete">' + trailing + '</span>';
+
+            el.style.left = (10 + Math.random() * 70) + '%';
+            el.style.top = (10 + Math.random() * 70) + '%';
+            el.style.fontSize = (1 + Math.random() * 0.4) + 'rem';
+            el.style.transform = `rotate(${(Math.random() - 0.5) * 5}deg)`;
+
+            document.body.appendChild(el);
+
+            requestAnimationFrame(() => {
+                el.classList.add('visible');
+            });
+
+            // Fade before you can fully absorb it
+            const displayTime = 2000 + Math.random() * 2000;
+            setTimeout(() => {
+                el.classList.add('fading');
+                setTimeout(() => el.remove(), 2000);
+            }, displayTime);
+        }
+
+        function draw() {
+            time += 0.016;
+
+            // Slow fade
+            ctx.fillStyle = 'rgba(10, 10, 11, 0.05)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Update and draw lines
+            for (const line of lines) {
+                line.update();
+                line.draw();
+            }
+
+            // Update and draw shapes
+            for (const shape of shapes) {
+                shape.update();
+                shape.draw();
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        function init() {
+            resize();
+
+            // Create incomplete lines
+            for (let i = 0; i < 15; i++) {
+                const line = new Line();
+                line.lifetime = Math.random() * 100; // Stagger start times
+                lines.push(line);
+            }
+
+            // Create incomplete shapes
+            for (let i = 0; i < 5; i++) {
+                const shape = new Shape();
+                shape.lifetime = Math.random() * 150;
+                shapes.push(shape);
+            }
+
+            draw();
+
+            // Fragments appear periodically
+            setInterval(showFragment, 4000);
+            setTimeout(showFragment, 1000);
+            setTimeout(showFragment, 2500);
+        }
+
+        // Click to create an incomplete line from that point
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.back')) return;
+
+            const line = new Line();
+            line.startX = e.clientX;
+            line.startY = e.clientY;
+            const angle = Math.random() * Math.PI * 2;
+            const length = 50 + Math.random() * 100;
+            line.endX = line.startX + Math.cos(angle) * length;
+            line.endY = line.startY + Math.sin(angle) * length;
+            lines.push(line);
+
+            // Keep array manageable
+            if (lines.length > 30) {
+                lines.shift();
+            }
+        });
+
+        window.addEventListener('resize', resize);
+        init();
+    </script>
+</body>
+</html>

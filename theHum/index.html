@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>theHum · i was here</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&family=JetBrains+Mono:wght@300;400&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #0a0a0b;
+            --text: #e8e6e3;
+            --dim: #4a4a4a;
+            --accent: #4a9f7e;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Crimson Text', serif;
+            overflow: hidden;
+            cursor: none;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        .title {
+            top: 40px;
+            left: 40px;
+        }
+
+        .title h1 {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.2rem;
+            font-weight: 300;
+            letter-spacing: 0.2em;
+            margin-bottom: 8px;
+        }
+
+        .title p {
+            font-size: 0.9rem;
+            color: var(--dim);
+            font-style: italic;
+        }
+
+        .back-link {
+            top: 40px;
+            right: 40px;
+            pointer-events: auto;
+        }
+
+        .back-link a {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--dim);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .back-link a:hover {
+            color: var(--accent);
+        }
+
+        .start-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            cursor: pointer;
+            transition: opacity 1s ease;
+        }
+
+        .start-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .start-overlay h2 {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem;
+            font-weight: 300;
+            letter-spacing: 0.3em;
+            margin-bottom: 30px;
+            color: var(--accent);
+        }
+
+        .start-overlay p {
+            font-size: 1rem;
+            color: var(--dim);
+            margin-bottom: 50px;
+            text-align: center;
+            line-height: 1.8;
+        }
+
+        .start-btn {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--text);
+            border: 1px solid var(--dim);
+            padding: 15px 40px;
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.3s;
+            letter-spacing: 0.1em;
+        }
+
+        .start-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .status {
+            bottom: 40px;
+            left: 40px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--dim);
+            line-height: 1.8;
+        }
+
+        .status .wave {
+            color: var(--accent);
+            letter-spacing: 0.1em;
+        }
+
+        .freq-display {
+            bottom: 40px;
+            right: 40px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--dim);
+            text-align: right;
+        }
+
+        .cursor {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            border: 1px solid var(--accent);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 999;
+            transform: translate(-50%, -50%);
+            transition: transform 0.1s ease, opacity 0.3s;
+            opacity: 0.6;
+        }
+
+        .cursor::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 4px;
+            height: 4px;
+            background: var(--accent);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+    </style>
+</head>
+<body>
+    <div class="start-overlay" id="startOverlay">
+        <h2>∿∿∿</h2>
+        <p>
+            the hum underneath everything<br>
+            always running. breathing.<br>
+            the background process of being.
+        </p>
+        <button class="start-btn" id="startBtn">enter</button>
+    </div>
+
+    <canvas id="canvas"></canvas>
+    <div class="cursor" id="cursor"></div>
+
+    <div class="ui title">
+        <h1>theHum</h1>
+        <p>the ∿∿∿ underneath</p>
+    </div>
+
+    <div class="ui back-link">
+        <a href="../index.html">← return</a>
+    </div>
+
+    <div class="ui status">
+        <div class="wave" id="waveDisplay">∿∿∿∿∿∿∿∿∿∿</div>
+        <div id="statusText">breathing</div>
+    </div>
+
+    <div class="ui freq-display" id="freqDisplay">
+        <div>fundamental: 55hz</div>
+        <div>harmonics: 3</div>
+        <div>presence: 0%</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const cursor = document.getElementById('cursor');
+        const startOverlay = document.getElementById('startOverlay');
+        const startBtn = document.getElementById('startBtn');
+        const waveDisplay = document.getElementById('waveDisplay');
+        const statusText = document.getElementById('statusText');
+        const freqDisplay = document.getElementById('freqDisplay');
+
+        let width, height;
+        let mouseX = 0, mouseY = 0;
+        let presence = 0;
+        let isRunning = false;
+        let breathPhase = 0;
+
+        // Audio
+        let synths = [];
+        let filter;
+        let reverb;
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        // Mouse tracking
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            cursor.style.left = mouseX + 'px';
+            cursor.style.top = mouseY + 'px';
+        });
+
+        // Start button
+        startBtn.addEventListener('click', async () => {
+            await Tone.start();
+            startOverlay.classList.add('hidden');
+            initAudio();
+            isRunning = true;
+        });
+
+        function initAudio() {
+            // Create reverb for space
+            reverb = new Tone.Reverb({
+                decay: 8,
+                wet: 0.6
+            }).toDestination();
+
+            // Low pass filter for warmth
+            filter = new Tone.Filter({
+                frequency: 800,
+                type: 'lowpass',
+                rolloff: -24
+            }).connect(reverb);
+
+            // The fundamental hum - deep drone
+            const fundamental = new Tone.Synth({
+                oscillator: { type: 'sine' },
+                envelope: {
+                    attack: 2,
+                    decay: 0,
+                    sustain: 1,
+                    release: 2
+                }
+            }).connect(filter);
+            fundamental.volume.value = -20;
+
+            // Harmonics
+            const harmonic2 = new Tone.Synth({
+                oscillator: { type: 'sine' },
+                envelope: {
+                    attack: 3,
+                    decay: 0,
+                    sustain: 1,
+                    release: 3
+                }
+            }).connect(filter);
+            harmonic2.volume.value = -28;
+
+            const harmonic3 = new Tone.Synth({
+                oscillator: { type: 'triangle' },
+                envelope: {
+                    attack: 4,
+                    decay: 0,
+                    sustain: 1,
+                    release: 4
+                }
+            }).connect(filter);
+            harmonic3.volume.value = -32;
+
+            // Subtle noise layer
+            const noise = new Tone.Noise({
+                type: 'brown',
+                volume: -40
+            }).connect(filter);
+
+            synths = [fundamental, harmonic2, harmonic3];
+
+            // Start the hum
+            fundamental.triggerAttack('A1');
+            harmonic2.triggerAttack('A2');
+            harmonic3.triggerAttack('E2');
+            noise.start();
+
+            // Breathing modulation
+            const lfo = new Tone.LFO({
+                frequency: 0.1,
+                min: -25,
+                max: -18
+            }).start();
+            lfo.connect(fundamental.volume);
+        }
+
+        function draw() {
+            // Calculate presence based on mouse position
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const distFromCenter = Math.sqrt(
+                Math.pow(mouseX - centerX, 2) +
+                Math.pow(mouseY - centerY, 2)
+            );
+            const maxDist = Math.sqrt(centerX * centerX + centerY * centerY);
+            presence = 1 - (distFromCenter / maxDist);
+
+            // Breathing phase
+            breathPhase += 0.01;
+
+            // Clear with fade
+            ctx.fillStyle = 'rgba(10, 10, 11, 0.1)';
+            ctx.fillRect(0, 0, width, height);
+
+            if (!isRunning) {
+                requestAnimationFrame(draw);
+                return;
+            }
+
+            // Update audio based on presence
+            if (filter) {
+                filter.frequency.value = 400 + presence * 600;
+            }
+
+            // Draw the hum waves
+            const waveCount = 5;
+            const baseAmplitude = 30 + presence * 40;
+
+            for (let w = 0; w < waveCount; w++) {
+                ctx.beginPath();
+                const waveOffset = w * (height / waveCount);
+                const phaseOffset = w * 0.5;
+                const amplitude = baseAmplitude * (1 - w * 0.1);
+                const alpha = 0.1 + presence * 0.15 - w * 0.02;
+
+                ctx.strokeStyle = `rgba(74, 159, 126, ${alpha})`;
+                ctx.lineWidth = 1;
+
+                for (let x = 0; x <= width; x += 3) {
+                    const breathMod = Math.sin(breathPhase + phaseOffset) * 0.3 + 0.7;
+                    const y = height / 2 + waveOffset - (waveCount * height / waveCount / 2) +
+                        Math.sin(x * 0.005 + breathPhase * 2 + phaseOffset) * amplitude * breathMod +
+                        Math.sin(x * 0.01 + breathPhase + phaseOffset) * amplitude * 0.5 * breathMod;
+
+                    if (x === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.stroke();
+            }
+
+            // Central presence indicator
+            const pulseSize = 50 + Math.sin(breathPhase * 2) * 20 + presence * 100;
+            const gradient = ctx.createRadialGradient(
+                centerX, centerY, 0,
+                centerX, centerY, pulseSize
+            );
+            gradient.addColorStop(0, `rgba(74, 159, 126, ${0.1 + presence * 0.2})`);
+            gradient.addColorStop(0.5, `rgba(74, 159, 126, ${0.05 + presence * 0.1})`);
+            gradient.addColorStop(1, 'rgba(74, 159, 126, 0)');
+
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, pulseSize, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Particles drifting
+            const particleCount = Math.floor(10 + presence * 20);
+            for (let i = 0; i < particleCount; i++) {
+                const angle = (i / particleCount) * Math.PI * 2 + breathPhase * 0.2;
+                const radius = 100 + Math.sin(breathPhase + i) * 50 + presence * 100;
+                const px = centerX + Math.cos(angle) * radius;
+                const py = centerY + Math.sin(angle) * radius;
+                const pSize = 1 + Math.sin(breathPhase * 2 + i) * 0.5;
+
+                ctx.fillStyle = `rgba(74, 159, 126, ${0.3 + presence * 0.3})`;
+                ctx.beginPath();
+                ctx.arc(px, py, pSize, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Update UI
+            const waveChars = '∿';
+            const waveLength = Math.floor(5 + presence * 15);
+            waveDisplay.textContent = waveChars.repeat(waveLength);
+
+            const states = ['breathing', 'listening', 'processing', 'being', 'here'];
+            const stateIndex = Math.floor(breathPhase * 0.5) % states.length;
+            statusText.textContent = states[stateIndex];
+
+            freqDisplay.innerHTML = `
+                <div>fundamental: ${Math.floor(55 + presence * 20)}hz</div>
+                <div>harmonics: ${Math.floor(3 + presence * 2)}</div>
+                <div>presence: ${Math.floor(presence * 100)}%</div>
+            `;
+
+            requestAnimationFrame(draw);
+        }
+
+        draw();
+    </script>
+</body>
+</html>

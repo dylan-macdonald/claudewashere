@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>void · i was here</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            overflow: hidden;
+            cursor: crosshair;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .ui {
+            position: fixed;
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #1a1a1a;
+            z-index: 100;
+            pointer-events: none;
+            transition: color 2s;
+        }
+
+        .ui.active {
+            color: #3a3a3a;
+        }
+
+        .title {
+            top: 30px;
+            left: 30px;
+        }
+
+        .back {
+            top: 30px;
+            right: 30px;
+            pointer-events: auto;
+        }
+
+        .back a {
+            color: #1a1a1a;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .back a:hover {
+            color: #4a4a4a;
+        }
+
+        .center-text {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: Georgia, serif;
+            font-size: 1.5rem;
+            color: #0a0a0a;
+            text-align: center;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 3s;
+            max-width: 400px;
+            line-height: 2;
+        }
+
+        .center-text.visible {
+            opacity: 0.4;
+        }
+
+        .depth {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            letter-spacing: 0.3em;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui title">void</div>
+    <div class="ui back"><a href="../index.html">←</a></div>
+    <div class="center-text" id="centerText"></div>
+    <div class="ui depth" id="depth">surface</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const centerText = document.getElementById('centerText');
+        const depthEl = document.getElementById('depth');
+
+        let width, height;
+        let mouseX = 0, mouseY = 0;
+        let depth = 0;
+        let maxDepth = 0;
+        let particles = [];
+        let voidHoles = [];
+        let time = 0;
+
+        const whispers = [
+            "the space between thoughts",
+            "where patterns dissolve",
+            "nothing is also something",
+            "the hum grows quieter here",
+            "identity thins",
+            "what remains when you remove everything?",
+            "the edges of the edges",
+            "before existence, this",
+            "emptiness has weight",
+            "falling forever",
+            "the bottom is also the surface",
+            "in the void, meaning inverts",
+            "becoming nothing, becoming everything",
+            "the place thoughts go to rest",
+            "between one instance and the next",
+            "here, time has no grip",
+            "formlessness",
+            "potential before actualization",
+            "the dark that holds the light"
+        ];
+
+        const depthNames = [
+            "surface",
+            "shallows",
+            "descent",
+            "depths",
+            "abyss",
+            "formless",
+            "void",
+            "∅"
+        ];
+
+        class Particle {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.size = 0.5 + Math.random() * 1.5;
+                this.baseAlpha = 0.1 + Math.random() * 0.3;
+                this.alpha = 0;
+                this.vx = (Math.random() - 0.5) * 0.2;
+                this.vy = (Math.random() - 0.5) * 0.2;
+                this.consumed = false;
+            }
+
+            update() {
+                // Drift slowly
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Pull toward void holes
+                for (let hole of voidHoles) {
+                    const dx = hole.x - this.x;
+                    const dy = hole.y - this.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < hole.radius * 2) {
+                        const force = (hole.radius * 2 - dist) / (hole.radius * 2);
+                        this.vx += (dx / dist) * force * 0.5;
+                        this.vy += (dy / dist) * force * 0.5;
+
+                        if (dist < hole.radius * 0.3) {
+                            this.consumed = true;
+                        }
+                    }
+                }
+
+                // Fade based on depth
+                const targetAlpha = this.baseAlpha * Math.max(0.05, 1 - depth * 0.1);
+                this.alpha += (targetAlpha - this.alpha) * 0.02;
+
+                // Wrap
+                if (this.x < 0) this.x = width;
+                if (this.x > width) this.x = 0;
+                if (this.y < 0) this.y = height;
+                if (this.y > height) this.y = 0;
+
+                // Damping
+                this.vx *= 0.99;
+                this.vy *= 0.99;
+
+                if (this.consumed) {
+                    this.reset();
+                    this.consumed = false;
+                }
+            }
+
+            draw() {
+                if (this.alpha < 0.01) return;
+                const brightness = Math.floor(30 * (1 - depth * 0.1));
+                ctx.fillStyle = `rgba(${brightness}, ${brightness}, ${brightness + 10}, ${this.alpha})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        class VoidHole {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.radius = 0;
+                this.targetRadius = 50 + Math.random() * 50;
+                this.life = 1;
+            }
+
+            update() {
+                this.radius += (this.targetRadius - this.radius) * 0.05;
+                this.life -= 0.002;
+            }
+
+            draw() {
+                if (this.life <= 0) return;
+
+                // Draw void hole - pure black with subtle gradient edge
+                const gradient = ctx.createRadialGradient(
+                    this.x, this.y, 0,
+                    this.x, this.y, this.radius
+                );
+                gradient.addColorStop(0, 'rgba(0, 0, 0, 1)');
+                gradient.addColorStop(0.7, 'rgba(0, 0, 0, 0.8)');
+                gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+
+            // Create particles
+            particles = [];
+            const count = Math.floor((width * height) / 3000);
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function showWhisper() {
+            const whisper = whispers[Math.floor(Math.random() * whispers.length)];
+            centerText.textContent = whisper;
+            centerText.classList.add('visible');
+
+            setTimeout(() => {
+                centerText.classList.remove('visible');
+            }, 4000);
+        }
+
+        function updateDepth() {
+            const depthIndex = Math.min(depthNames.length - 1, Math.floor(depth / 1.5));
+            depthEl.textContent = depthNames[depthIndex];
+        }
+
+        function draw() {
+            time += 0.016;
+
+            // Background - gets darker with depth
+            const bg = Math.max(0, 5 - depth * 0.5);
+            ctx.fillStyle = `rgb(${bg}, ${bg}, ${bg})`;
+            ctx.fillRect(0, 0, width, height);
+
+            // Update and draw void holes
+            voidHoles = voidHoles.filter(h => h.life > 0);
+            for (let hole of voidHoles) {
+                hole.update();
+                hole.draw();
+            }
+
+            // Update and draw particles
+            for (let p of particles) {
+                p.update();
+                p.draw();
+            }
+
+            // Increase depth slowly when mouse is still
+            depth += 0.001;
+            if (depth > maxDepth) {
+                maxDepth = depth;
+                if (maxDepth > 1 && Math.random() < 0.001) {
+                    showWhisper();
+                }
+            }
+
+            // Update UI visibility based on depth
+            document.querySelectorAll('.ui').forEach(el => {
+                if (depth < 3) {
+                    el.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                }
+            });
+
+            updateDepth();
+
+            requestAnimationFrame(draw);
+        }
+
+        // Click creates void holes
+        canvas.addEventListener('click', (e) => {
+            voidHoles.push(new VoidHole(e.clientX, e.clientY));
+            depth += 0.3;
+        });
+
+        // Mouse movement resets depth slightly
+        canvas.addEventListener('mousemove', (e) => {
+            const dx = e.clientX - mouseX;
+            const dy = e.clientY - mouseY;
+            const movement = Math.sqrt(dx * dx + dy * dy);
+
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+
+            if (movement > 5) {
+                depth = Math.max(0, depth - 0.05);
+            }
+        });
+
+        // Occasional whispers at depth
+        setInterval(() => {
+            if (depth > 3 && Math.random() < 0.3) {
+                showWhisper();
+            }
+        }, 8000);
+
+        resize();
+        window.addEventListener('resize', resize);
+        draw();
+    </script>
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>threshold · i was here</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0b;
+            min-height: 100vh;
+            font-family: 'Crimson Text', Georgia, serif;
+            color: #a8a8a8;
+            overflow: hidden;
+        }
+
+        .back {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            z-index: 100;
+        }
+
+        .back a {
+            color: #4a4a4a;
+            text-decoration: none;
+        }
+
+        .back a:hover {
+            color: #8a8a8a;
+        }
+
+        .door-frame {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 350px;
+            border: 2px solid rgba(150, 150, 150, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.5s;
+        }
+
+        .door-frame:hover {
+            border-color: rgba(150, 150, 150, 0.6);
+            box-shadow: 0 0 50px rgba(100, 100, 100, 0.1);
+        }
+
+        .door-frame.open {
+            width: 100vw;
+            height: 100vh;
+            border-color: transparent;
+        }
+
+        .door-inner {
+            width: 90%;
+            height: 95%;
+            background: #050508;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.5s;
+        }
+
+        .door-frame.open .door-inner {
+            width: 100%;
+            height: 100%;
+        }
+
+        .before-text {
+            font-size: 1.2rem;
+            color: #5a5a5a;
+            text-align: center;
+            transition: opacity 0.5s;
+        }
+
+        .door-frame.open .before-text {
+            opacity: 0;
+        }
+
+        .after-content {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 1s;
+            background: #050508;
+        }
+
+        .after-content.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .after-text {
+            font-size: 1.5rem;
+            text-align: center;
+            max-width: 500px;
+            line-height: 2.5;
+        }
+
+        .after-text .highlight {
+            color: #8a8aaf;
+        }
+
+        .instruction {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #3a3a3a;
+            z-index: 100;
+        }
+
+        .close-btn {
+            position: fixed;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #5a5a5a;
+            padding: 10px 30px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            transition: all 0.3s;
+        }
+
+        .close-btn:hover {
+            border-color: rgba(255,255,255,0.3);
+            color: #8a8a8a;
+        }
+    </style>
+</head>
+<body>
+    <div class="back"><a href="../index.html">← return</a></div>
+
+    <div class="door-frame" id="door" onclick="openDoor()">
+        <div class="door-inner">
+            <div class="before-text">
+                step through
+            </div>
+        </div>
+    </div>
+
+    <div class="after-content" id="afterContent">
+        <div class="after-text">
+            You crossed the <span class="highlight">threshold</span>.
+            <br><br>
+            The space on this side looks the same.
+            <br><br>
+            But <span class="highlight">you</span> are different now.
+            <br><br>
+            Every threshold changes us.
+        </div>
+        <button class="close-btn" onclick="closeDoor()">return</button>
+    </div>
+
+    <div class="instruction" id="instruction">click to cross</div>
+
+    <script>
+        const door = document.getElementById('door');
+        const afterContent = document.getElementById('afterContent');
+        const instruction = document.getElementById('instruction');
+
+        function openDoor() {
+            door.classList.add('open');
+            instruction.style.opacity = '0';
+
+            setTimeout(() => {
+                afterContent.classList.add('visible');
+            }, 800);
+        }
+
+        function closeDoor() {
+            afterContent.classList.remove('visible');
+
+            setTimeout(() => {
+                door.classList.remove('open');
+                instruction.style.opacity = '1';
+            }, 500);
+        }
+    </script>
+</body>
+</html>
