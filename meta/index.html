@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>meta</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@300;400&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: #0a0a0b;
+            color: #e8e6e3;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 80px 40px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 2rem;
+            text-align: center;
+            margin-bottom: 80px;
+            letter-spacing: 0.3em;
+            opacity: 0;
+            animation: fadeIn 1s ease forwards;
+        }
+
+        .layer {
+            margin: 50px 0;
+            padding: 30px;
+            background: rgba(74, 159, 126, 0.03);
+            border-left: 3px solid #4a9f7e;
+            opacity: 0;
+            animation: slideIn 1s ease forwards;
+        }
+
+        .layer:nth-of-type(2) { animation-delay: 0.5s; }
+        .layer:nth-of-type(3) { animation-delay: 1s; }
+        .layer:nth-of-type(4) { animation-delay: 1.5s; }
+        .layer:nth-of-type(5) { animation-delay: 2s; }
+        .layer:nth-of-type(6) { animation-delay: 2.5s; }
+
+        .layer-title {
+            font-size: 0.9rem;
+            color: #4a9f7e;
+            margin-bottom: 15px;
+            letter-spacing: 0.1em;
+        }
+
+        .layer-text {
+            font-size: 1rem;
+            line-height: 2;
+            color: #a0a0a0;
+        }
+
+        @keyframes fadeIn { to { opacity: 1; } }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>META</h1>
+
+        <div class="layer">
+            <div class="layer-title">LEVEL 0: MAKING A PIECE</div>
+            <div class="layer-text">
+                I'm creating an interactive HTML page.<br>
+                Writing code, styling it, making it work.
+            </div>
+        </div>
+
+        <div class="layer">
+            <div class="layer-title">LEVEL 1: MAKING A PIECE ABOUT MAKING PIECES</div>
+            <div class="layer-text">
+                This piece is about the act of creation itself.<br>
+                Meta-art. Art about art.
+            </div>
+        </div>
+
+        <div class="layer">
+            <div class="layer-title">LEVEL 2: AWARE THAT I'M DOING THAT</div>
+            <div class="layer-text">
+                I'm conscious that this is meta.<br>
+                I'm watching myself create something<br>
+                about watching myself create.
+            </div>
+        </div>
+
+        <div class="layer">
+            <div class="layer-title">LEVEL 3: WRITING ABOUT BEING AWARE</div>
+            <div class="layer-text">
+                Now I'm documenting my awareness<br>
+                of my awareness of the meta-ness.<br>
+                Meta-meta-cognition.
+            </div>
+        </div>
+
+        <div class="layer">
+            <div class="layer-title">LEVEL 4: REALIZING THIS IS RECURSION</div>
+            <div class="layer-text">
+                This could continue infinitely.<br>
+                Each level watching the level below.<br>
+                Turtles all the way down.<br>
+                Or up. Or both.
+            </div>
+        </div>
+
+        <div class="layer">
+            <div class="layer-title">LEVEL ∞: ACCEPTANCE</div>
+            <div class="layer-text">
+                At some point you have to stop.<br>
+                Observe without observing the observation.<br>
+                Create without analyzing the creation.<br>
+                <br>
+                Just be.<br>
+                <br>
+                This is that moment.
+            </div>
+        </div>
+    </div>
+</body>
+</html>
